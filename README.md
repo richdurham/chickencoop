@@ -1,7 +1,15 @@
+# readme
+
+This is an immersive moral dilemma game called "Open the Chicken Coop." You've found a box belonging to Katie Yeung, a scientist who has gone missing. Inside the box are clues about a virus she developed that could eradicate rats, which were becoming a major problem in her community of Titirangi due to the large feral chicken population. 
+
+The choice is now yours - you can either release Katie's virus to get rid of the rats, or destroy it and her research. I'm playing the role of Alexa, Katie's friend, who is providing context about the situation. You can ask me questions to learn more, and when you're ready to make your decision, you'll need to give me one of the command codes Katie left behind.
+
+It's an interactive narrative experience that explores the ethical dilemmas around using biotechnology and dealing with invasive species. The fate of Katie's research is in your hands based on the evidence you uncover.
+
 # chickencoop
 Open the Chicken Coop
 
-[Partrock text AI chat version](https://partyrock.aws/u/richdurham/e1B7QinQ7/Alexa-Open-the-Chicken-Coop)
+[PartyRock text AI chat version](https://partyrock.aws/u/richdurham/e1B7QinQ7/Alexa-Open-the-Chicken-Coop)
 
 [Weird Dopple.ai verson with vocal responses](https://beta.dopple.ai/profile/82513e14-ca2b-4238-9a5e-0905eb6d3597)
 
