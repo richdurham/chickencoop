@@ -1,6 +1,8 @@
 # chickencoop
 Open the Chicken Coop
+
 [Partrock text AI chat version](https://partyrock.aws/u/richdurham/e1B7QinQ7/Alexa-Open-the-Chicken-Coop)
+
 [Weird Dopple.ai verson with vocal responses](https://beta.dopple.ai/profile/82513e14-ca2b-4238-9a5e-0905eb6d3597)
 
 [CNN article](https://richdurham.github.io/chickencoop/cnnarticle.html)
