@@ -30,6 +30,8 @@ const ITEMS = [
   { id: 'kete', group: 'loose', label: 'Kete', caption: 'A small woven flax kete, with two tags on a chain and three clear capsules.', pages: 1, w: 420, h: 560, ask: 'Can we be infected by the contents of the box?' },
   { id: 'kete-note', group: 'loose', label: 'Paper from the kete', caption: 'Folded inside the kete, dated in green ink.', pages: 1, w: 420, h: 560 },
   { id: 'boarding-pass', group: 'loose', label: 'Boarding pass', caption: 'A boarding pass.', pages: 1, w: 560, h: 231 },
+  { id: 'coins', group: 'loose', label: 'Coins', caption: 'A handful of loose coins.', pages: 1, w: 560, h: 374, ask: 'What are the coins?',
+    credit: { text: 'Stand-in photo (the box’s coins were lost): rawpixel, public domain (CC0 1.0)', href: 'https://www.rawpixel.com/image/6034993/photo-image-background-public-domain-golden' } },
   { id: 'certificate', group: 'loose', label: 'Certificate', caption: 'A certificate of achievement.', pages: 1, w: 560, h: 378, ask: 'What is C5 Biotech?' },
   { id: 'plant', group: 'loose', label: 'Plant cutting', caption: 'A cutting with a handwritten label around the stem.', pages: 1, w: 420, h: 560, ask: 'Is the virus harmful to humans?' },
   { id: 'glasses', group: 'loose', label: 'Glasses', caption: 'A pair of glasses.', pages: 1, w: 560, h: 420 },

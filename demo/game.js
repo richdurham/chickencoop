@@ -374,6 +374,7 @@
       (o('lid-note') || o('card')) && 'Who is Tim?',
       o('family-photo') && 'Who is Ken?',
       o('emails') && 'Tell me about the conference in Dubrovnik',
+      o('coins') && 'Are the coins euros?',
       'Is the virus harmful to humans?',
       (o('council') || o('cnn')) && 'What is the rat problem?',
       o('kete') && 'Can we be infected by the contents of the box?',
