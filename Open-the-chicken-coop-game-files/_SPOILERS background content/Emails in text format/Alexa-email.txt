@@ -1,0 +1,34 @@
+From: katie257@hotmail.com
+Date: 17 Jul 2019 12:21:16 +1200
+Message-ID: <CAGrRdk1w_O2yvNxzTKHrRoJ6V-XFhHREBgSbv+t7PsMtG6MQPw@mail.gmail.com>
+Subject: Delivery
+To: alexa12345@hotmail.com
+Content-Type: multipart/alternative; boundary="000000000000b61446058e25f02a"
+
+--000000000000b61446058e25f02a
+Content-Type: text/plain; charset="UTF-8"
+
+My dear Alexa,
+
+I have now deleted all my emails but made sure to print some for you.
+Tim has packed everything up, he can be trusted.
+You will know what to do when the delivery arrives. 
+
+Do not contact me. 
+Ken and the kids left on Tuesday to stay with his family in Singapore. I am going soon too.
+
+Until soon I hope. Hugs.
+Katie
+
+--000000000000b61446058e25f02a
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">My dear Alexa,<div><br></div><div>I have now deleted all m=
+y emails but made sure to print some for you. Tim has packed everything up, he can be trusted. You will know what to do when=
+ the delivery arrives. You need to make the choice.
+Do not try to contact me. Ken and the kids are with his =
+mother in Hong Kong.</div><div><br></div><div>Until soon I hope. Hugs.</div=
+><div>Katie</div></div>
+
+--000000000000b61446058e25f02a--
