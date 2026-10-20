@@ -4,30 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Open the Chicken Coop</title>
-  <meta name="description" content="A browser demo of Open the Chicken Coop: search a missing scientist's box, talk to her friend Alexa, and decide whether to release her virus or destroy it.">
+  <meta name="description" content="A browser demo of Open the Chicken Coop: go through Katie Yeung's box, talk to her friend Alexa, and decide whether to release her virus or destroy it.">
   <meta name="theme-color" content="#17231D">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,800;1,6..72,400;1,6..72,500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <!-- The closed box. The only way in is to say the line. -->
   <section id="intro" class="intro" aria-labelledby="intro-title">
-    <div class="intro__box" aria-hidden="true">
-      <div class="crate">
-        <div class="crate__lid">
-          <span class="crate__stamp">K. Yeung, desk 4, C5</span>
-          <span class="crate__note">ask Alexa<br>&ldquo;open the chicken coop&rdquo;</span>
-        </div>
-        <div class="crate__body"></div>
-      </div>
-    </div>
+    <figure class="intro__photo">
+      <img src="box/box-closed.jpg" width="1110" height="800" alt="An archive box with KATIE YEUNG and DO NOT DISPOSE written on the lid in marker, and a pink post-it stuck to it.">
+    </figure>
 
     <div class="intro__copy">
       <h1 id="intro-title" class="intro__title">&ldquo;Open the chicken coop.&rdquo;</h1>
-      <p class="intro__lede">This box turned up on Alexa&rsquo;s porch. It belongs to Katie Yeung, a scientist from Titirangi who hasn&rsquo;t been seen since Tuesday. Inside is the only sample of something she made, and a decision she didn&rsquo;t get to make.</p>
+      <p class="intro__lede">You&rsquo;ve found a box belonging to Katie Yeung, a scientist who has gone missing. Inside are clues about a virus she developed that could eradicate the rats plaguing her community of Titirangi. The choice is yours: release it, or destroy it and her research.</p>
 
       <form id="intro-form" class="say" autocomplete="off">
         <label for="intro-input" class="say__label">Say it to Alexa</label>
@@ -47,7 +41,7 @@
   <!-- The open box and Alexa. -->
   <main id="game" class="game" hidden>
     <header class="rail">
-      <p class="rail__title">Katie Yeung&rsquo;s desk</p>
+      <p class="rail__title">Katie Yeung&rsquo;s box</p>
       <p id="progress" class="rail__progress" aria-live="polite"></p>
       <button id="reset" type="button" class="btn btn--quiet rail__reset">Start over</button>
     </header>
@@ -59,20 +53,27 @@
 
     <div class="stage" data-view="box">
       <section id="box" class="box" aria-label="Contents of the box" role="tabpanel">
-        <p class="box__hint">Pick anything up to read it. When you&rsquo;re ready, say one of Katie&rsquo;s codes to Alexa.</p>
-        <ul id="props" class="props"></ul>
+        <p class="box__hint">Pick anything up to look at it closely. When you&rsquo;re ready, give Alexa one of Katie&rsquo;s command codes.</p>
+        <div id="groups"></div>
       </section>
 
       <aside id="alexa" class="alexa" aria-label="Talk to Alexa" role="tabpanel">
         <header class="alexa__head">
-          <span id="alexa-light" class="alexa__light" aria-hidden="true"></span>
+          <span id="alexa-face" class="alexa__face"><img src="box/alexa.jpg" width="240" height="240" alt=""></span>
           <div>
-            <p class="alexa__name">Alexa</p>
-            <p class="alexa__sub">Katie&rsquo;s friend, on speaker</p>
+            <p class="alexa__name">Alexa Gardner</p>
+            <p class="alexa__sub">Katie&rsquo;s childhood friend</p>
           </div>
         </header>
         <ol id="log" class="log" aria-live="polite" aria-relevant="additions"></ol>
         <div id="chips" class="chips" aria-label="Things you could ask"></div>
+        <div id="codes" class="codes">
+          <p class="codes__label">Katie&rsquo;s command codes</p>
+          <div class="codes__row">
+            <button type="button" class="code" data-code="release"></button>
+            <button type="button" class="code" data-code="destroy"></button>
+          </div>
+        </div>
         <form id="ask" class="ask" autocomplete="off">
           <label for="ask-input" class="sr-only">Ask Alexa something, or say a code</label>
           <input id="ask-input" class="ask__input" type="text" placeholder="Ask Alexa, or say a code" spellcheck="false">
@@ -82,18 +83,31 @@
     </div>
   </main>
 
-  <!-- Reading a prop up close. -->
+  <!-- Looking at an item up close. -->
   <div id="reader" class="reader" role="dialog" aria-modal="true" aria-labelledby="reader-title" hidden>
     <div class="reader__backdrop" data-close></div>
     <div class="reader__sheet">
       <header class="reader__head">
-        <h2 id="reader-title" class="reader__title"></h2>
-        <p id="reader-hint" class="reader__hint"></p>
+        <div>
+          <h2 id="reader-title" class="reader__title"></h2>
+          <p id="reader-caption" class="reader__caption"></p>
+        </div>
+        <button type="button" class="reader__x" data-close aria-label="Put it back">&times;</button>
       </header>
-      <div id="reader-paper" class="reader__paper"></div>
+      <div id="reader-view" class="reader__view">
+        <img id="reader-img" class="reader__img" alt="">
+      </div>
+      <nav id="reader-pager" class="reader__pager" aria-label="Pages">
+        <button id="reader-prev" type="button" class="btn btn--quiet">Previous</button>
+        <p id="reader-page" class="reader__page" aria-live="polite"></p>
+        <button id="reader-next" type="button" class="btn btn--quiet">Next</button>
+      </nav>
       <footer class="reader__foot">
+        <div class="reader__tools">
+          <button id="reader-zoom" type="button" class="btn btn--quiet" aria-pressed="false">Zoom in</button>
+          <a id="reader-full" class="reader__full" target="_blank" rel="noopener">Open full size</a>
+        </div>
         <button id="reader-ask" type="button" class="btn btn--device">Ask Alexa about this</button>
-        <button type="button" class="btn btn--quiet" data-close>Put it back</button>
       </footer>
     </div>
   </div>
@@ -101,12 +115,11 @@
   <!-- After the final code. -->
   <section id="ending" class="ending" aria-labelledby="ending-title" hidden>
     <div class="ending__col">
-      <p id="ending-kicker" class="ending__kicker"></p>
-      <h2 id="ending-title" class="ending__title"></h2>
+      <p class="ending__kicker">Your final choice</p>
+      <h2 id="ending-title" class="ending__title" tabindex="-1"></h2>
       <blockquote id="ending-alexa" class="ending__alexa"></blockquote>
-      <div id="ending-epilogue" class="ending__epilogue"></div>
-      <h3 class="ending__subhead">What you knew when you said it</h3>
-      <ul id="ending-clues" class="ending__clues"></ul>
+      <h3 class="ending__subhead" id="ending-count"></h3>
+      <ul id="ending-items" class="ending__items"></ul>
       <p class="ending__actions">
         <button id="again" type="button" class="btn btn--paper">Play again</button>
       </p>

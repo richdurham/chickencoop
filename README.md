@@ -9,7 +9,7 @@ It's an interactive narrative experience that explores the ethical dilemmas arou
 # chickencoop
 Open the Chicken Coop
 
-[Play the browser demo](https://richdurham.github.io/chickencoop/demo/) — the whole game in one page: search Katie's box, talk to Alexa, and say a command code. The story content (box props, Alexa's answers, endings) lives in [`demo/data.js`](demo/data.js) so it can be edited without touching the game code.
+[Play the browser demo](https://richdurham.github.io/chickencoop/demo/) — the whole game in one page: go through Katie's box, talk to Alexa, and say a command code. The box contents are web-sized copies of `Open-the-chicken-coop-game-files`, kept in [`demo/box/`](demo/box/), and the item list and Alexa's script live in [`demo/data.js`](demo/data.js).
 
 [PartyRock text AI chat version](https://partyrock.aws/u/richdurham/e1B7QinQ7/Alexa-Open-the-Chicken-Coop)
 

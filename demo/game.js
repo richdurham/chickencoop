@@ -2,20 +2,21 @@
 (function () {
   'use strict';
 
-  var STORE = 'chickencoop-demo-v1';
+  var STORE = 'chickencoop-demo-v2';
   var $ = function (id) { return document.getElementById(id); };
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   var state = fresh();
 
   function fresh() {
-    return { started: false, opened: [], asked: [], log: [], pending: null, ending: null, fallback: 0 };
+    return { started: false, opened: [], asked: [], log: [], ending: null, fallback: 0 };
   }
 
   // ---------- Saving (best effort: private windows may block storage) ----------
 
   function load() {
     try {
+      localStorage.removeItem('chickencoop-demo-v1'); // saves from the placeholder version
       var raw = localStorage.getItem(STORE);
       if (raw) {
         var saved = JSON.parse(raw);
@@ -47,12 +48,7 @@
 
   function has(n, phrase) { return n.indexOf(' ' + phrase + ' ') !== -1; }
 
-  function hasAny(n, phrases) {
-    for (var i = 0; i < phrases.length; i++) if (has(n, phrases[i])) return true;
-    return false;
-  }
-
-  /* Longer phrases beat shorter ones, so "is katie dead" wins over "katie". */
+  /* Longer phrases beat shorter ones, so "who is igor" wins over "igor". */
   function bestAnswer(n) {
     var best = null, bestScore = 0;
     QA.forEach(function (entry) {
@@ -67,199 +63,185 @@
     return best;
   }
 
-  // ---------- Paper ----------
-
-  var THUMB = {
-    postit:  { blocks: 2, h: '9.5rem' },
-    index:   { blocks: 3, h: '9.25rem' },
-    case:    { blocks: 2, h: '8.5rem' },
-    graph:   { blocks: 4, h: '12rem' },
-    fax:     { blocks: 5, h: '11rem' },
-    card:    { blocks: 4, h: '8.25rem' },
-    photo:   { blocks: 0, h: 'none' },
-    slip:    { blocks: 3, h: '10rem' },
-    flyer:   { blocks: 2, h: '10.5rem' },
-    news:    { blocks: 3, h: '11.5rem' },
-    airmail: { blocks: 3, h: '10.5rem' }
-  };
-
-  var SCENES = {
-    dubrovnik:
-      '<svg class="scene" viewBox="0 0 300 200" role="img" aria-label="A dinner table on a terrace at dusk, with old city walls and harbour lights behind">' +
-        '<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">' +
-          '<stop offset="0" stop-color="#22324F"/><stop offset=".55" stop-color="#6E5A70"/><stop offset="1" stop-color="#D49568"/>' +
-        '</linearGradient></defs>' +
-        '<rect width="300" height="200" fill="url(#sky)"/>' +
-        '<path d="M0 92 L40 80 L80 88 L130 70 L180 84 L230 74 L300 86 L300 120 L0 120 Z" fill="#2B2A36"/>' +
-        '<path d="M0 104 h300 v18 h-300 z" fill="#4A3D3E"/>' +
-        '<g fill="#9C5A3E">' +
-          '<rect x="12" y="96" width="14" height="8"/><rect x="34" y="94" width="10" height="10"/><rect x="58" y="97" width="16" height="7"/>' +
-          '<rect x="96" y="92" width="12" height="12"/><rect x="128" y="96" width="18" height="8"/><rect x="170" y="94" width="11" height="10"/>' +
-          '<rect x="204" y="97" width="15" height="7"/><rect x="240" y="93" width="12" height="11"/><rect x="270" y="96" width="16" height="8"/>' +
-        '</g>' +
-        '<rect x="0" y="122" width="300" height="34" fill="#1C2433"/>' +
-        '<g fill="#F3C978" opacity=".85">' +
-          '<rect x="20" y="126" width="2" height="9"/><rect x="62" y="128" width="2" height="7"/><rect x="104" y="125" width="2" height="10"/>' +
-          '<rect x="151" y="127" width="2" height="8"/><rect x="196" y="126" width="2" height="9"/><rect x="243" y="128" width="2" height="7"/>' +
-        '</g>' +
-        '<rect x="0" y="156" width="300" height="44" fill="#2A211D"/>' +
-        '<rect x="18" y="160" width="264" height="8" fill="#E9E1D2"/>' +
-        '<g fill="#3A2E2A">' +
-          '<circle cx="34" cy="146" r="8"/><rect x="25" y="152" width="18" height="10"/>' +
-          '<circle cx="62" cy="144" r="8" fill="#5A4436"/><rect x="53" y="150" width="18" height="12" fill="#5A4436"/>' +
-          '<circle cx="90" cy="146" r="8"/><rect x="81" y="152" width="18" height="10"/>' +
-          '<circle cx="118" cy="145" r="8"/><rect x="109" y="151" width="18" height="11"/>' +
-          '<circle cx="146" cy="146" r="8"/><rect x="137" y="152" width="18" height="10"/>' +
-          '<circle cx="174" cy="145" r="8"/><rect x="165" y="151" width="18" height="11"/>' +
-          '<circle cx="202" cy="146" r="8"/><rect x="193" y="152" width="18" height="10"/>' +
-          '<circle cx="230" cy="145" r="8"/><rect x="221" y="151" width="18" height="11"/>' +
-        '</g>' +
-        '<g fill="#F2E9D6" opacity=".9">' +
-          '<rect x="40" y="132" width="3" height="7"/><rect x="96" y="131" width="3" height="7"/><rect x="124" y="132" width="3" height="7"/>' +
-          '<rect x="152" y="131" width="3" height="7"/><rect x="180" y="132" width="3" height="7"/><rect x="208" y="131" width="3" height="7"/><rect x="236" y="132" width="3" height="7"/>' +
-        '</g>' +
-        '<circle cx="268" cy="143" r="8.5" fill="#15161B"/><rect x="258" y="150" width="20" height="13" fill="#15161B"/>' +
-      '</svg>'
-  };
-
-  function blockEl(b) {
-    var el = document.createElement(b.t === 'rule' ? 'div' : 'p');
-    el.className = 'b b-' + b.t;
-    if (b.t === 'link') {
-      var a = document.createElement('a');
-      a.href = b.href;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.textContent = b.v;
-      el.appendChild(a);
-    } else if (b.v) {
-      el.textContent = b.v;
-    }
-    return el;
-  }
-
-  function paperEl(prop, thumb) {
-    var paper = document.createElement('div');
-    paper.className = 'paper paper--' + prop.material;
-    if (prop.material === 'case' && state.ending) paper.classList.add('is-dark');
-    if (prop.scene) paper.insertAdjacentHTML('beforeend', SCENES[prop.scene]);
-
-    var limit = thumb ? THUMB[prop.material].blocks : prop.body.length;
-    if (limit > 0) {
-      var inner = document.createElement('div');
-      inner.className = 'paper__inner';
-      prop.body.slice(0, limit).forEach(function (b) { inner.appendChild(blockEl(b)); });
-      paper.appendChild(inner);
-    }
-    return paper;
-  }
-
   // ---------- The box ----------
 
   function isOpened(id) { return state.opened.indexOf(id) !== -1; }
 
-  function renderProps() {
-    var list = $('props');
-    list.textContent = '';
-    PROPS.forEach(function (prop, i) {
-      var li = document.createElement('li');
-      li.className = 'prop';
-      li.style.setProperty('--w', prop.w + 'px');
-      li.style.setProperty('--rot', prop.rot + 'deg');
-      li.style.setProperty('--i', i);
+  function itemById(id) {
+    for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].id === id) return ITEMS[i];
+    return null;
+  }
 
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'prop__btn';
-      btn.dataset.prop = prop.id;
+  function pageSrc(item, p) { return 'box/' + item.id + '-' + (p + 1) + '.jpg'; }
 
-      var face = document.createElement('div');
-      face.className = 'prop__face';
-      face.setAttribute('aria-hidden', 'true');
-      face.style.setProperty('--h', THUMB[prop.material].h);
-      face.appendChild(paperEl(prop, true));
+  /* A small, fixed tilt per item so the table looks put down by hand. */
+  function tilt(i) { return (((i * 37) % 9) - 4) * 0.75; }
 
-      var cap = document.createElement('span');
-      cap.className = 'prop__caption';
-      var name = document.createElement('span');
-      name.className = 'prop__name';
-      name.textContent = prop.label;
-      cap.appendChild(name);
-      if (isOpened(prop.id)) {
-        var read = document.createElement('span');
-        read.className = 'prop__read';
-        read.textContent = 'read';
-        cap.appendChild(read);
-      }
+  function renderBox() {
+    var root = $('groups');
+    root.textContent = '';
+    var i = 0;
+    GROUPS.forEach(function (group) {
+      var section = document.createElement('section');
+      section.className = 'group';
+      var h = document.createElement('h2');
+      h.className = 'group__label';
+      h.textContent = group.label;
+      section.appendChild(h);
 
-      btn.appendChild(face);
-      btn.appendChild(cap);
-      btn.setAttribute('aria-label', prop.label + (isOpened(prop.id) ? ', read' : '') + '. ' + prop.hint);
-      btn.addEventListener('click', function () { openReader(prop.id); });
-
-      li.appendChild(btn);
-      list.appendChild(li);
+      var list = document.createElement('ul');
+      list.className = 'items';
+      ITEMS.filter(function (it) { return it.group === group.id; }).forEach(function (item) {
+        list.appendChild(itemEl(item, i++));
+      });
+      section.appendChild(list);
+      root.appendChild(section);
     });
     renderProgress();
+  }
+
+  function itemEl(item, i) {
+    var li = document.createElement('li');
+    li.className = 'item';
+    li.style.setProperty('--i', i);
+    li.style.setProperty('--rot', tilt(i) + 'deg');
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'item__btn';
+    btn.dataset.item = item.id;
+
+    var print = document.createElement('span');
+    print.className = 'item__print' + (item.pages > 1 ? ' item__print--stack' : '');
+    var img = document.createElement('img');
+    img.src = 'box/thumb/' + item.id + '.jpg';
+    img.width = item.w;
+    img.height = item.h;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    print.appendChild(img);
+
+    var cap = document.createElement('span');
+    cap.className = 'item__caption';
+    var name = document.createElement('span');
+    name.className = 'item__name';
+    name.textContent = item.label;
+    cap.appendChild(name);
+
+    var meta = document.createElement('span');
+    var seen = isOpened(item.id);
+    if (seen) {
+      meta.className = 'item__seen';
+      meta.textContent = 'seen';
+    } else if (item.pages > 1) {
+      meta.textContent = item.pages + (item.sides ? ' sides' : ' pages');
+    }
+    if (meta.textContent) cap.appendChild(meta);
+
+    btn.appendChild(print);
+    btn.appendChild(cap);
+    btn.setAttribute('aria-label', item.label + (seen ? ', seen' : '') +
+      (item.pages > 1 ? ', ' + item.pages + (item.sides ? ' sides' : ' pages') : '') + '. ' + item.caption);
+    btn.addEventListener('click', function () { openReader(item.id); });
+
+    li.appendChild(btn);
+    return li;
   }
 
   function renderProgress() {
     var n = state.opened.length;
     $('progress').textContent = n === 0
-      ? 'Nothing read yet'
-      : 'You’ve read ' + n + ' of ' + PROPS.length + ' things';
+      ? 'Nothing looked at yet'
+      : 'You’ve looked at ' + n + ' of ' + ITEMS.length + ' things';
   }
 
   // ---------- Reader ----------
 
-  var readerProp = null;
+  var reading = null; // { item, page }
   var returnFocus = null;
 
-  function propById(id) {
-    for (var i = 0; i < PROPS.length; i++) if (PROPS[i].id === id) return PROPS[i];
-    return null;
-  }
-
   function openReader(id) {
-    var prop = propById(id);
-    if (!prop) return;
-    readerProp = prop;
+    var item = itemById(id);
+    if (!item) return;
+    reading = { item: item, page: 0 };
     returnFocus = document.activeElement;
 
-    $('reader-title').textContent = prop.label;
-    $('reader-hint').textContent = prop.hint;
-    var holder = $('reader-paper');
-    holder.textContent = '';
-    holder.appendChild(paperEl(prop, false));
-    holder.scrollTop = 0;
-    $('reader').style.setProperty('--rot', prop.rot + 'deg');
+    $('reader-title').textContent = item.label;
+    $('reader-caption').textContent = item.caption;
+    $('reader-pager').hidden = item.pages < 2;
+    $('reader-ask').hidden = !item.ask;
+    zoom(false);
+    showPage();
+
     $('reader').hidden = false;
     document.body.style.overflow = 'hidden';
-    $('reader-ask').focus();
+    (item.pages > 1 ? $('reader-next') : $('reader').querySelector('.reader__x')).focus();
 
     if (!isOpened(id)) {
       state.opened.push(id);
       save();
-      renderProps();
+      renderBox();
       renderChips();
     }
+  }
+
+  function showPage() {
+    var item = reading.item, p = reading.page;
+    var where = item.sides
+      ? item.sides[p] + ' (' + (p + 1) + ' of ' + item.pages + ')'
+      : 'Page ' + (p + 1) + ' of ' + item.pages;
+
+    var img = $('reader-img');
+    img.src = pageSrc(item, p);
+    img.alt = item.label + (item.pages > 1 ? ', ' + where.toLowerCase() : '') + '. ' + item.caption;
+    $('reader-full').href = pageSrc(item, p);
+    $('reader-page').textContent = where;
+    $('reader-prev').disabled = p === 0;
+    $('reader-next').disabled = p === item.pages - 1;
+    $('reader-view').scrollTop = 0;
+
+    if (p + 1 < item.pages) new Image().src = pageSrc(item, p + 1);
+  }
+
+  /* Zoom stays on while turning pages, so an article can be read through. */
+  function zoom(on) {
+    $('reader-view').classList.toggle('is-zoomed', on);
+    $('reader-zoom').textContent = on ? 'Fit to screen' : 'Zoom in';
+    $('reader-zoom').setAttribute('aria-pressed', String(on));
+  }
+
+  function toggleZoom() {
+    zoom(!$('reader-view').classList.contains('is-zoomed'));
+  }
+
+  function turn(step) {
+    if (!reading) return;
+    var p = reading.page + step;
+    if (p < 0 || p >= reading.item.pages) return;
+    reading.page = p;
+    showPage();
   }
 
   function closeReader() {
     if ($('reader').hidden) return;
     $('reader').hidden = true;
+    $('reader-img').removeAttribute('src');
     document.body.style.overflow = '';
-    readerProp = null;
-    if (returnFocus && document.body.contains(returnFocus)) returnFocus.focus();
-    else {
-      var again = document.querySelector('.prop__btn');
-      if (again) again.focus();
-    }
+    var id = reading && reading.item.id;
+    reading = null;
+    // The box re-renders when something is seen for the first time, so find the button again.
+    var again = id && document.querySelector('.item__btn[data-item="' + id + '"]');
+    if (again) again.focus();
+    else if (returnFocus && document.body.contains(returnFocus)) returnFocus.focus();
   }
 
   function trapFocus(e) {
     if (e.key !== 'Tab' || $('reader').hidden) return;
-    var items = $('reader').querySelectorAll('button, a[href], [tabindex]:not([tabindex="-1"])');
+    var items = Array.prototype.filter.call(
+      $('reader').querySelectorAll('button, a[href]'),
+      function (el) { return !el.disabled && el.offsetParent !== null; }
+    );
     if (!items.length) return;
     var first = items[0], last = items[items.length - 1];
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
@@ -302,19 +284,19 @@
     queue = queue.then(function () {
       return new Promise(function (done) {
         if (gen !== generation) { done(); return; }
-        var light = $('alexa-light');
+        var face = $('alexa-face');
         var typing = document.createElement('li');
         typing.className = 'msg msg--typing';
         typing.setAttribute('aria-label', 'Alexa is talking');
         typing.innerHTML = '<span></span><span></span><span></span>';
         $('log').appendChild(typing);
         scrollLog();
-        light.classList.add('is-speaking');
+        face.classList.add('is-speaking');
 
         var wait = reduceMotion ? 250 : Math.min(1700, 420 + text.length * 7);
         setTimeout(function () {
           typing.remove();
-          light.classList.remove('is-speaking');
+          face.classList.remove('is-speaking');
           if (gen !== generation) { done(); return; }
           appendMsg('her', text);
           remember('her', text);
@@ -326,34 +308,16 @@
     });
   }
 
+  /* The codes follow the Blueprint: the short code gets "are you sure?",
+     the code with "cleansing" in it is final. */
   function respond(raw) {
     var n = norm(raw);
-    var release = has(n, 'release'), destroy = has(n, 'destroy');
-    var falcon = has(n, 'falcon'), cleansing = has(n, 'cleansing');
-    var r616 = has(n, '616'), d264 = has(n, '264');
-
-    if (falcon || ((release || destroy) && (r616 || d264))) {
-      if ((release && d264) || (destroy && r616)) return { text: CODE_LINES.mixed, code: true };
-      var choice = release && r616 ? 'release' : destroy && d264 ? 'destroy' : null;
-      if (!choice) return { text: CODE_LINES.partial, code: true };
-
-      // The full code only counts once Alexa has asked "are you sure?".
-      if (cleansing && state.pending === choice) {
-        state.pending = null;
-        return { text: ENDINGS[choice][informed() ? 'informed' : 'uninformed'].alexa, code: true, final: choice };
-      }
-      state.pending = choice;
-      return { text: CODE_LINES[choice + 'Confirm'], code: true };
+    var cleansing = has(n, 'cleansing');
+    if (has(n, 'release') && has(n, '616')) {
+      return cleansing ? { text: CODES.release.final, code: true, final: 'release' } : { text: CODES.release.confirm, code: true };
     }
-
-    if (state.pending) {
-      if (hasAny(n, ['no', 'not sure', 'wait', 'cancel', 'hold on', 'never mind', 'nevermind', 'not yet', 'stop'])) {
-        state.pending = null;
-        return { text: CODE_LINES.unsure };
-      }
-      if (hasAny(n, ['yes', 'yeah', 'yep', 'sure', 'im sure', 'i am sure', 'do it', 'confirm'])) {
-        return { text: 'Then say the whole thing — the code with the extra word in it, the way she wrote it on the card.' };
-      }
+    if (has(n, 'destroy') && has(n, '264')) {
+      return cleansing ? { text: CODES.destroy.final, code: true, final: 'destroy' } : { text: CODES.destroy.confirm, code: true };
     }
 
     var entry = bestAnswer(n);
@@ -375,7 +339,7 @@
     if (reply.final) lockAsk(true);
     var gen = generation;
     her(reply.text, reply.final ? function () {
-      setTimeout(function () { if (gen === generation) finish(reply.final); }, reduceMotion ? 300 : 1600);
+      setTimeout(function () { if (gen === generation) finish(reply.final); }, reduceMotion ? 300 : 2200);
     } : null);
   }
 
@@ -383,22 +347,21 @@
     $('ask-input').disabled = locked;
     $('ask').querySelector('button').disabled = locked;
     $('chips').hidden = locked;
+    $('codes').hidden = locked;
   }
 
   function renderChips() {
     var o = isOpened;
     var options = [
       'Who is Katie?',
-      o('card') && 'Who is Igor Kutznetsov?',
-      o('notebook') && 'What happened in trial 23?',
-      (o('memo') || o('messages')) && 'What about the courier on the 14th?',
-      (o('photo') || o('stub')) && 'Tell me about the conference in Dubrovnik',
-      o('letter') && 'Who is Ken?',
       'What is C5 Biotech?',
+      (o('summer-school') || o('business-card') || o('emails') || o('certificate')) && 'Who is Igor Kutznetsov?',
+      (o('lid-note') || o('card')) && 'Who is Tim?',
+      o('family-photo') && 'Who is Ken?',
+      o('emails') && 'Tell me about the conference in Dubrovnik',
       'Is the virus harmful to humans?',
-      (o('memo') || o('messages')) && 'Who is Tim?',
-      o('stub') && 'Are the coins euros?',
-      'Where is Katie?',
+      (o('council') || o('cnn')) && 'What is the rat problem?',
+      o('kete') && 'Can we be infected by the contents of the box?',
       'What would you choose?'
     ].filter(function (q) { return q && state.asked.indexOf(q) === -1; }).slice(0, 4);
 
@@ -429,58 +392,36 @@
     }
   }
 
-  // ---------- Endings ----------
-
-  function knownClues() {
-    var known = {};
-    CLUES.forEach(function (c) { known[c.id] = c.props.some(isOpened); });
-    return known;
-  }
-
-  /* Informed means the notebook page plus at least two other kinds of clue. */
-  function informed() {
-    var known = knownClues();
-    var count = Object.keys(known).filter(function (k) { return known[k]; }).length;
-    return known.anomaly && count >= 3;
-  }
+  // ---------- Ending ----------
 
   function finish(choice) {
-    var path = informed() ? 'informed' : 'uninformed';
-    state.ending = { choice: choice, path: path };
+    state.ending = { choice: choice };
     save();
     renderEnding();
   }
 
   function renderEnding() {
-    var e = ENDINGS[state.ending.choice][state.ending.path];
-    $('ending-kicker').textContent = e.kicker;
-    $('ending-title').textContent = state.ending.choice === 'release' ? 'You released it.' : 'You destroyed it.';
+    var choice = state.ending.choice;
+    $('ending-title').textContent = choice === 'release' ? 'You released the virus.' : 'You destroyed the virus.';
 
     var quote = $('ending-alexa');
-    quote.textContent = e.alexa;
+    quote.textContent = CODES[choice].final;
     var cite = document.createElement('cite');
     cite.textContent = 'Alexa';
     quote.appendChild(cite);
 
-    var epi = $('ending-epilogue');
-    epi.textContent = '';
-    e.epilogue.forEach(function (p) {
-      var el = document.createElement('p');
-      el.textContent = p;
-      epi.appendChild(el);
-    });
-
-    var known = knownClues();
-    var list = $('ending-clues');
+    $('ending-count').textContent = 'You looked at ' + state.opened.length + ' of ' + ITEMS.length + ' things in the box';
+    var list = $('ending-items');
     list.textContent = '';
-    CLUES.forEach(function (c) {
+    ITEMS.forEach(function (item) {
+      var seen = isOpened(item.id);
       var li = document.createElement('li');
-      li.className = known[c.id] ? 'clue--known' : 'clue--missed';
+      li.className = seen ? 'seen--yes' : 'seen--no';
       var s = document.createElement('span');
-      s.className = 'clue__state';
-      s.textContent = known[c.id] ? 'You knew' : 'You missed';
+      s.className = 'seen__state';
+      s.textContent = seen ? 'Looked at' : 'Didn’t look';
       var t = document.createElement('span');
-      t.textContent = known[c.id] ? c.known : c.missed;
+      t.textContent = item.label;
       li.appendChild(s);
       li.appendChild(t);
       list.appendChild(li);
@@ -491,7 +432,6 @@
     $('game').hidden = true;
     $('ending').hidden = false;
     window.scrollTo(0, 0);
-    $('ending-title').setAttribute('tabindex', '-1');
     $('ending-title').focus();
   }
 
@@ -501,7 +441,7 @@
     $('intro').hidden = true;
     $('ending').hidden = true;
     $('game').hidden = false;
-    renderProps();
+    renderBox();
     renderChips();
 
     var log = $('log');
@@ -518,7 +458,7 @@
       save();
       WELCOME.forEach(function (line) { her(line); });
     }
-    var first = document.querySelector('.prop__btn');
+    var first = document.querySelector('.item__btn');
     if (first) first.focus({ preventScroll: true });
   }
 
@@ -529,19 +469,18 @@
     setTimeout(function () {
       intro.classList.remove('is-opening');
       enterBox(true);
-    }, reduceMotion ? 50 : 950);
+    }, reduceMotion ? 50 : 850);
   }
 
   function onIntro(e) {
     e.preventDefault();
     var input = $('intro-input');
-    var said = input.value.trim() || input.placeholder;
-    var n = norm(said);
-    var ok = INTRO_PHRASES.some(function (p) { return n.indexOf(' ' + p + ' ') !== -1 || n.trim() === p; });
+    var n = norm(input.value.trim() || input.placeholder);
+    var ok = INTRO_PHRASES.some(function (p) { return has(n, p); });
     if (ok) {
       openCoop();
     } else {
-      $('intro-reply').textContent = 'That’s a command for me to start the game. Tell me as written: “Alexa, open the chicken coop.”';
+      $('intro-reply').textContent = START_HINT;
       input.select();
     }
   }
@@ -586,11 +525,25 @@
       input.value = '';
     });
 
+    // The code buttons only fill in the line; saying it is still up to the player.
+    Array.prototype.forEach.call(document.querySelectorAll('.code'), function (btn) {
+      btn.textContent = CODES[btn.dataset.code].short;
+      btn.addEventListener('click', function () {
+        var input = $('ask-input');
+        input.value = btn.textContent;
+        input.focus();
+      });
+    });
+
     $('reader').addEventListener('click', function (e) {
       if (e.target.closest('[data-close]')) closeReader();
     });
+    $('reader-prev').addEventListener('click', function () { turn(-1); });
+    $('reader-next').addEventListener('click', function () { turn(1); });
+    $('reader-zoom').addEventListener('click', toggleZoom);
+    $('reader-img').addEventListener('click', toggleZoom);
     $('reader-ask').addEventListener('click', function () {
-      var q = readerProp && readerProp.ask;
+      var q = reading && reading.item.ask;
       closeReader();
       showView('alexa');
       if (q) ask(q);
@@ -598,7 +551,10 @@
     });
 
     document.addEventListener('keydown', function (e) {
+      if ($('reader').hidden) return;
       if (e.key === 'Escape') closeReader();
+      else if (e.key === 'ArrowRight') turn(1);
+      else if (e.key === 'ArrowLeft') turn(-1);
       trapFocus(e);
     });
 
