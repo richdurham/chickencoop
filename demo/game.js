@@ -169,6 +169,7 @@
 
     $('reader-title').textContent = item.label;
     $('reader-caption').textContent = item.caption;
+    renderCredit(item.credit);
     $('reader-pager').hidden = item.pages < 2;
     $('reader-ask').hidden = !item.ask;
     zoom(false);
@@ -202,6 +203,20 @@
     $('reader-view').scrollTop = 0;
 
     if (p + 1 < item.pages) new Image().src = pageSrc(item, p + 1);
+  }
+
+  /* Photos that aren't from Katie's box carry their licence credit. */
+  function renderCredit(credit) {
+    var el = $('reader-credit');
+    el.textContent = '';
+    el.hidden = !credit;
+    if (!credit) return;
+    var a = document.createElement('a');
+    a.href = credit.href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = credit.text;
+    el.appendChild(a);
   }
 
   /* Zoom stays on while turning pages, so an article can be read through. */

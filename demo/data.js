@@ -20,7 +20,8 @@ const GROUPS = [
 
 /* Each item's images are box/<id>-<n>.jpg, with a table thumbnail at
    box/thumb/<id>.jpg (w x h). `sides` names the pages of two-sided things;
-   `ask` is a question Alexa has a scripted answer for. */
+   `ask` is a question Alexa has a scripted answer for; `credit` ({ text, href })
+   attributes a stand-in photo that didn't come from the real box. */
 const ITEMS = [
   { id: 'lid-note', group: 'lid', label: 'Pink post-it', caption: 'Stuck to the top of the box, signed by Tim.', pages: 1, w: 560, h: 420, ask: 'Who is Tim?' },
   { id: 'lid-inside', group: 'lid', label: 'Inside the lid', caption: 'Written on the underside of the lid.', pages: 1, w: 560, h: 420, ask: 'What is the chicken coop?' },
