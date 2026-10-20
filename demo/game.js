@@ -33,34 +33,19 @@
     try { localStorage.removeItem(STORE); } catch (e) { /* ignore */ }
   }
 
-  // ---------- Text matching ----------
+  // ---------- Understanding (the matching itself is in understand.js) ----------
 
-  var NUMBER_WORDS = [
-    [/\bsix one six\b/g, '616'], [/\bsix sixteen\b/g, '616'], [/\bsix hundred (and )?sixteen\b/g, '616'],
-    [/\btwo six four\b/g, '264'], [/\btwo sixty four\b/g, '264'], [/\btwo hundred (and )?sixty four\b/g, '264']
-  ];
+  var norm = Understand.norm, has = Understand.has;
+  var meaning = null;  // { embed, index } once meaning.js has loaded the sentence model
+  var lastSeen = null; // { id, at }: the item looked at most recently, for "who's this?"
+  var SEEN_FOR = 3 * 60 * 1000;
+  var debug = /[?&]debug\b/.test(location.search); // ?debug logs each decision to the console
 
-  function norm(s) {
-    var n = String(s).toLowerCase().replace(/[’'`]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
-    NUMBER_WORDS.forEach(function (pair) { n = n.replace(pair[0], pair[1]); });
-    return ' ' + n + ' ';
-  }
+  window.addEventListener('chickencoop:meaning-ready', function (e) { meaning = e.detail; });
 
-  function has(n, phrase) { return n.indexOf(' ' + phrase + ' ') !== -1; }
-
-  /* Longer phrases beat shorter ones, so "who is igor" wins over "igor". */
-  function bestAnswer(n) {
-    var best = null, bestScore = 0;
-    QA.forEach(function (entry) {
-      entry.keys.forEach(function (key) {
-        var k = norm(key).trim();
-        if (k && has(n, k)) {
-          var score = k.split(' ').length * 100 + k.length;
-          if (score > bestScore) { bestScore = score; best = entry; }
-        }
-      });
-    });
-    return best;
+  function startMeaning() {
+    window.MeaningWanted = true;
+    if (window.Meaning) window.Meaning.start();
   }
 
   // ---------- The box ----------
@@ -165,6 +150,7 @@
     var item = itemById(id);
     if (!item) return;
     reading = { item: item, page: 0 };
+    lastSeen = { id: id, at: Date.now() };
     returnFocus = document.activeElement;
 
     $('reader-title').textContent = item.label;
@@ -294,67 +280,86 @@
     remember('you', text, extra);
   }
 
+  /* text can be a promise: the typing dots show while Alexa works out her answer. */
   function her(text, then) {
     var gen = generation;
     queue = queue.then(function () {
-      return new Promise(function (done) {
-        if (gen !== generation) { done(); return; }
-        var face = $('alexa-face');
-        var typing = document.createElement('li');
-        typing.className = 'msg msg--typing';
-        typing.setAttribute('aria-label', 'Alexa is talking');
-        typing.innerHTML = '<span></span><span></span><span></span>';
-        $('log').appendChild(typing);
-        scrollLog();
-        face.classList.add('is-speaking');
+      if (gen !== generation) return;
+      var face = $('alexa-face');
+      var typing = document.createElement('li');
+      typing.className = 'msg msg--typing';
+      typing.setAttribute('aria-label', 'Alexa is talking');
+      typing.innerHTML = '<span></span><span></span><span></span>';
+      $('log').appendChild(typing);
+      scrollLog();
+      face.classList.add('is-speaking');
+      var shown = Date.now();
 
-        var wait = reduceMotion ? 250 : Math.min(1700, 420 + text.length * 7);
-        setTimeout(function () {
-          typing.remove();
-          face.classList.remove('is-speaking');
-          if (gen !== generation) { done(); return; }
-          appendMsg('her', text);
-          remember('her', text);
-          flagAlexaTab();
-          if (then) then();
-          done();
-        }, wait);
+      // A failure working out the answer must not silence Alexa for the rest of the game.
+      return Promise.resolve(text).catch(function () { return FALLBACKS[0]; }).then(function (t) {
+        return new Promise(function (done) {
+          var wait = (reduceMotion ? 250 : Math.min(1700, 420 + t.length * 7)) - (Date.now() - shown);
+          setTimeout(function () {
+            typing.remove();
+            face.classList.remove('is-speaking');
+            if (gen !== generation) { done(); return; }
+            appendMsg('her', t);
+            remember('her', t);
+            flagAlexaTab();
+            if (then) then();
+            done();
+          }, Math.max(0, wait));
+        });
       });
     });
   }
 
   /* The codes follow the Blueprint: the short code gets "are you sure?",
-     the code with "cleansing" in it is final. */
-  function respond(raw) {
+     the code with "cleansing" in it is final. They are matched word for word,
+     never by meaning, so a guess can never make the final choice. */
+  function codeReply(raw) {
     var n = norm(raw);
     var cleansing = has(n, 'cleansing');
     if (has(n, 'release') && has(n, '616')) {
-      return cleansing ? { text: CODES.release.final, code: true, final: 'release' } : { text: CODES.release.confirm, code: true };
+      return cleansing ? { text: CODES.release.final, final: 'release' } : { text: CODES.release.confirm };
     }
     if (has(n, 'destroy') && has(n, '264')) {
-      return cleansing ? { text: CODES.destroy.final, code: true, final: 'destroy' } : { text: CODES.destroy.confirm, code: true };
+      return cleansing ? { text: CODES.destroy.final, final: 'destroy' } : { text: CODES.destroy.confirm };
     }
+    return null;
+  }
 
-    var entry = bestAnswer(n);
-    if (entry) return { text: entry.a };
-
-    var text = FALLBACKS[state.fallback % FALLBACKS.length];
-    state.fallback += 1;
-    return { text: text };
+  /* Everything else: by meaning once the model is ready, by words until then.
+     Resolves to what Alexa says. */
+  function understand(raw) {
+    var context = lastSeen && Date.now() - lastSeen.at < SEEN_FOR ? lastSeen.id : null;
+    var byWords = function () { return Understand.byKeywords(raw); };
+    var work = meaning
+      ? meaning.embed(raw).then(function (v) { return Understand.byMeaning(v, meaning.index, raw, { contextItem: context }); })
+      : Promise.resolve(byWords());
+    return work.catch(byWords).then(function (result) {
+      var turn = state.fallback;
+      if (result.kind === 'fallback') { state.fallback += 1; save(); }
+      if (debug) {
+        console.log('[alexa]', meaning ? 'meaning' : 'words', result.kind, result.entry ? result.entry.id : '-',
+          result.score !== undefined ? result.score.toFixed(2) : '-', result.item ? result.item.id : '-', JSON.stringify(raw));
+      }
+      return Understand.compose(result, turn);
+    });
   }
 
   function ask(raw) {
     var text = String(raw).trim();
     if (!text) return;
-    var reply = respond(text);
-    you(text, reply.code);
+    var code = codeReply(text);
+    you(text, !!code);
     if (state.asked.indexOf(text) === -1) state.asked.push(text);
     save();
     renderChips();
-    if (reply.final) lockAsk(true);
+    if (code && code.final) lockAsk(true);
     var gen = generation;
-    her(reply.text, reply.final ? function () {
-      setTimeout(function () { if (gen === generation) finish(reply.final); }, reduceMotion ? 300 : 2200);
+    her(code ? code.text : understand(text), code && code.final ? function () {
+      setTimeout(function () { if (gen === generation) finish(code.final); }, reduceMotion ? 300 : 2200);
     } : null);
   }
 
@@ -454,6 +459,7 @@
   // ---------- Starting, resuming, resetting ----------
 
   function enterBox(animate) {
+    startMeaning();
     $('intro').hidden = true;
     $('ending').hidden = true;
     $('game').hidden = false;
@@ -509,6 +515,7 @@
   function restart() {
     wipe();
     state = fresh();
+    lastSeen = null;
     generation += 1;
     queue = Promise.resolve();
     lockAsk(false);

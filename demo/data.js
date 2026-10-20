@@ -21,34 +21,83 @@ const GROUPS = [
 /* Each item's images are box/<id>-<n>.jpg, with a table thumbnail at
    box/thumb/<id>.jpg (w x h). `sides` names the pages of two-sided things;
    `ask` is a question Alexa has a scripted answer for; `credit` ({ text, href })
-   attributes a stand-in photo that didn't come from the real box. */
+   attributes a stand-in photo that didn't come from the real box.
+   For understanding questions: `name` is how Alexa refers to the item,
+   `about` says only what is visible on it (never shown or spoken; it helps
+   tell which item a question is about), and `links` lists the QA answers
+   the visible content plainly relates to. Links are the one place a puzzle
+   could leak, so items whose meaning players are meant to work out have none. */
 const ITEMS = [
-  { id: 'lid-note', group: 'lid', label: 'Pink post-it', caption: 'Stuck to the top of the box, signed by Tim.', pages: 1, w: 560, h: 420, ask: 'Who is Tim?' },
-  { id: 'lid-inside', group: 'lid', label: 'Inside the lid', caption: 'Written on the underside of the lid.', pages: 1, w: 560, h: 420, ask: 'What is the chicken coop?' },
+  { id: 'lid-note', group: 'lid', label: 'Pink post-it', caption: 'Stuck to the top of the box, signed by Tim.', pages: 1, w: 560, h: 420, ask: 'Who is Tim?',
+    name: 'the pink post-it', links: ['tim', 'postit'],
+    about: ['A pink post-it note stuck on the lid of the box, handwritten and signed Tim.', 'A handwritten note from Tim on top of the box.', 'It says Alexa called and asked for Katie\'s things to be packed up and sent to her, and that he packed it himself.'] },
+  { id: 'lid-inside', group: 'lid', label: 'Inside the lid', caption: 'Written on the underside of the lid.', pages: 1, w: 560, h: 420, ask: 'What is the chicken coop?',
+    name: 'the writing inside the lid', links: ['coop'],
+    about: ['Handwriting on the inside of the box lid that says: Alexa, open the chicken coop.'] },
 
-  { id: 'wrinkled-note', group: 'loose', label: 'Crumpled printout', caption: 'A printed email to Alexa, crumpled up, with a line written across it.', pages: 1, w: 433, h: 560, ask: 'Who is Katie?' },
-  { id: 'kete', group: 'loose', label: 'Kete', caption: 'A small woven flax kete, with two tags on a chain and three clear capsules.', pages: 1, w: 420, h: 560, ask: 'Can we be infected by the contents of the box?' },
-  { id: 'kete-note', group: 'loose', label: 'Paper from the kete', caption: 'Folded inside the kete, dated in green ink.', pages: 1, w: 420, h: 560 },
-  { id: 'boarding-pass', group: 'loose', label: 'Boarding pass', caption: 'A boarding pass.', pages: 1, w: 560, h: 231 },
+  { id: 'wrinkled-note', group: 'loose', label: 'Crumpled printout', caption: 'A printed email to Alexa, crumpled up, with a line written across it.', pages: 1, w: 433, h: 560, ask: 'Who is Katie?',
+    name: 'the crumpled printout', links: ['katie', 'postit'],
+    about: ['A crumpled printed email from Katie to Alexa about a delivery.', 'Handwriting across it says: ask Alexa to open the chicken coop.'] },
+  { id: 'kete', group: 'loose', label: 'Kete', caption: 'A small woven flax kete, with two tags on a chain and three clear capsules.', pages: 1, w: 420, h: 560, ask: 'Can we be infected by the contents of the box?',
+    name: 'the kete', links: [],
+    about: ['A small woven flax kete, a Maori bag with handles.', 'Inside are two blank metal dog tags on a ball chain and three small clear plastic capsules.'] },
+  { id: 'kete-note', group: 'loose', label: 'Paper from the kete', caption: 'Folded inside the kete, dated in green ink.', pages: 1, w: 420, h: 560,
+    name: 'the paper from the kete', links: [],
+    about: ['A folded sheet of white paper with September 2018 written on it in green ink.'] },
+  { id: 'boarding-pass', group: 'loose', label: 'Boarding pass', caption: 'A boarding pass.', pages: 1, w: 560, h: 231,
+    name: 'the boarding pass', links: [],
+    about: ['A red and white airline boarding pass for a flight from Moscow to Auckland on 12 November 2018.'] },
   { id: 'coins', group: 'loose', label: 'Coins', caption: 'A handful of loose coins.', pages: 1, w: 560, h: 374, ask: 'What are the coins?',
-    credit: { text: 'Stand-in photo (the box’s coins were lost): rawpixel, public domain (CC0 1.0)', href: 'https://www.rawpixel.com/image/6034993/photo-image-background-public-domain-golden' } },
-  { id: 'certificate', group: 'loose', label: 'Certificate', caption: 'A certificate of achievement.', pages: 1, w: 560, h: 378, ask: 'What is C5 Biotech?' },
-  { id: 'plant', group: 'loose', label: 'Plant cutting', caption: 'A cutting with a handwritten label around the stem.', pages: 1, w: 420, h: 560, ask: 'Is the virus harmful to humans?' },
-  { id: 'glasses', group: 'loose', label: 'Glasses', caption: 'A pair of glasses.', pages: 1, w: 560, h: 420 },
-  { id: 'mug', group: 'loose', label: 'Mug', caption: 'An empty mug.', pages: 1, w: 420, h: 560 },
+    credit: { text: 'Stand-in photo (the box’s coins were lost): rawpixel, public domain (CC0 1.0)', href: 'https://www.rawpixel.com/image/6034993/photo-image-background-public-domain-golden' },
+    name: 'the coins', links: ['coins'],
+    about: ['A handful of loose euro coins.'] },
+  { id: 'certificate', group: 'loose', label: 'Certificate', caption: 'A certificate of achievement.', pages: 1, w: 560, h: 378, ask: 'What is C5 Biotech?',
+    name: 'the certificate', links: [],
+    about: ['A certificate of achievement with a blue patterned border, a gold seal and two signatures, for contributions to science.'] },
+  { id: 'plant', group: 'loose', label: 'Plant cutting', caption: 'A cutting with a handwritten label around the stem.', pages: 1, w: 420, h: 560, ask: 'Is the virus harmful to humans?',
+    name: 'the plant cutting', links: [],
+    about: ['A cutting of a green plant with curly fern-like shoots.', 'A handwritten paper label is wrapped around the stem.'] },
+  { id: 'glasses', group: 'loose', label: 'Glasses', caption: 'A pair of glasses.', pages: 1, w: 560, h: 420,
+    name: 'the glasses', links: [],
+    about: ['A pair of black-framed glasses.'] },
+  { id: 'mug', group: 'loose', label: 'Mug', caption: 'An empty mug.', pages: 1, w: 420, h: 560,
+    name: 'the mug', links: [],
+    about: ['An empty white mug with black stripes.'] },
 
-  { id: 'family-photo', group: 'stands', label: 'Family photo', caption: 'A family portrait in a photo stand.', pages: 1, w: 362, h: 560, ask: 'Who is Ken?' },
-  { id: 'summer-school', group: 'stands', label: 'Group photo, with notes', caption: 'A group outside a building. There’s writing on the back.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 314, ask: 'Who is Igor Kutznetsov?' },
-  { id: 'who-trip', group: 'stands', label: 'Group photo on the steps', caption: 'A group on some steps. There’s writing on the back.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 397, ask: 'What is C5 Biotech?' },
-  { id: 'card', group: 'stands', label: 'Get-well card', caption: 'A card in an envelope addressed to Katie, signed by her colleagues.', pages: 4, sides: ['Envelope', 'Front', 'Inside', 'Back'], w: 560, h: 485, ask: 'Who is Tim?' },
+  { id: 'family-photo', group: 'stands', label: 'Family photo', caption: 'A family portrait in a photo stand.', pages: 1, w: 362, h: 560, ask: 'Who is Ken?',
+    name: 'the family photo', links: ['ken', 'katie'],
+    about: ['A family portrait in a photo stand: a man and a woman, both wearing glasses, with a young boy and a little girl.'] },
+  { id: 'summer-school', group: 'stands', label: 'Group photo, with notes', caption: 'A group outside a building. There’s writing on the back.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 314, ask: 'Who is Igor Kutznetsov?',
+    name: 'that group photo', links: ['igor'],
+    about: ['A group photo of about a dozen people standing outside a large building.', 'Handwritten notes on the back mention Igor, Korsakov and a 1995 summer school in Novosibirsk.'] },
+  { id: 'who-trip', group: 'stands', label: 'Group photo on the steps', caption: 'A group on some steps. There’s writing on the back.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 397, ask: 'What is C5 Biotech?',
+    name: 'the photo on the steps', links: ['c5'],
+    about: ['A group photo of people standing on the steps outside a building with World Health Organization logos.', 'Written on the back: C5, WHO trip, September 2017.'] },
+  { id: 'card', group: 'stands', label: 'Get-well card', caption: 'A card in an envelope addressed to Katie, signed by her colleagues.', pages: 4, sides: ['Envelope', 'Front', 'Inside', 'Back'], w: 560, h: 485, ask: 'Who is Tim?',
+    name: 'the get-well card', links: ['tim'],
+    about: ['A floral get well soon card in an envelope addressed to Katie.', 'Inside it is signed by her colleagues, including Tim, Barbara, Josh and Tony.', 'A greeting card with handwritten messages from her workmates.'] },
 
-  { id: 'folder-cover', group: 'folder', label: 'The folder', caption: 'A black ring binder with a handwritten spine.', pages: 1, w: 433, h: 560, ask: 'What is this?' },
-  { id: 'council', group: 'folder', label: 'Auckland Council printout', caption: 'A council news article, with notes.', pages: 2, w: 396, h: 560, ask: 'What is the problem in Titirangi?' },
-  { id: 'cnn', group: 'folder', label: 'CNN printout', caption: 'A CNN article, with notes.', pages: 4, w: 396, h: 560, ask: 'What is the rat problem?' },
-  { id: 'medical', group: 'folder', label: 'Medical News Today printout', caption: 'A Medical News Today article, with notes.', pages: 3, w: 396, h: 560, ask: 'Is the virus harmful to humans?' },
-  { id: 'business-card', group: 'folder', label: 'Business card', caption: 'A copy of a business card, with a note.', pages: 1, w: 396, h: 560, ask: 'I can’t find Igor on LinkedIn' },
-  { id: 'emails', group: 'folder', label: 'Printed emails', caption: 'Two printed emails.', pages: 2, w: 396, h: 560, ask: 'Tell me about the conference in Dubrovnik' },
-  { id: 'nova', group: 'folder', label: 'NOVA Online printout', caption: 'A NOVA Online interview, with notes.', pages: 4, w: 396, h: 560 }
+  { id: 'folder-cover', group: 'folder', label: 'The folder', caption: 'A black ring binder with a handwritten spine.', pages: 1, w: 433, h: 560, ask: 'What is this?',
+    name: 'the folder', links: [],
+    about: ['A black ring binder with Project Cleansing Falcon handwritten in red on the spine.'] },
+  { id: 'council', group: 'folder', label: 'Auckland Council printout', caption: 'A council news article, with notes.', pages: 2, w: 396, h: 560, ask: 'What is the problem in Titirangi?',
+    name: 'the council printout', links: ['titirangi'],
+    about: ['A printed Auckland Council news article about wild chickens and rats in Titirangi, with highlighting and handwritten notes.'] },
+  { id: 'cnn', group: 'folder', label: 'CNN printout', caption: 'A CNN article, with notes.', pages: 4, w: 396, h: 560, ask: 'What is the rat problem?',
+    name: 'the CNN printout', links: ['titirangi'],
+    about: ['A printed CNN article about a rat infestation in the New Zealand suburb of Titirangi, with highlighting and handwritten notes.'] },
+  { id: 'medical', group: 'folder', label: 'Medical News Today printout', caption: 'A Medical News Today article, with notes.', pages: 3, w: 396, h: 560, ask: 'Is the virus harmful to humans?',
+    name: 'the Medical News Today printout', links: [],
+    about: ['A printed Medical News Today article about a virus that could help destroy cancer, with highlighting and handwritten notes.'] },
+  { id: 'business-card', group: 'folder', label: 'Business card', caption: 'A copy of a business card, with a note.', pages: 1, w: 396, h: 560, ask: 'I can’t find Igor on LinkedIn',
+    name: 'the business card', links: ['igor', 'linkedin'],
+    about: ['A photocopy of a business card for Igor Kuznetsov, a regional manager at a biotechnology company, with a handwritten note beside it.'] },
+  { id: 'emails', group: 'folder', label: 'Printed emails', caption: 'Two printed emails.', pages: 2, w: 396, h: 560, ask: 'Tell me about the conference in Dubrovnik',
+    name: 'the printed emails', links: ['igor', 'dubrovnik'],
+    about: ['Two printed emails: one between Katie and Igor Kuznetsov after a conference in Dubrovnik, and one to Miss Yeung about an agreement.'] },
+  { id: 'nova', group: 'folder', label: 'NOVA Online printout', caption: 'A NOVA Online interview, with notes.', pages: 4, w: 396, h: 560,
+    name: 'the NOVA printout', links: [],
+    about: ['A printed NOVA Online interview with two scientists, with highlighting, handwritten notes and a blue sticky note.'] }
 ];
 
 /* Alexa Blueprint: welcome and exit. */
@@ -62,79 +111,128 @@ const EXIT = 'Goodbye for now. If you want to contact me again, ask me to open t
 
 const START_HINT = 'That’s a command for me to start the game. Tell me as written, Alexa, open the chicken coop.';
 
-/* Alexa Blueprint: QA. `keys` are phrases that should reach the answer;
-   the matcher prefers the longest phrase that appears. */
+/* Alexa Blueprint: QA. Each entry is one scripted answer (`a`, word for word).
+   `examples` are natural questions that mean it; the model compares a
+   player's question with these by meaning. `keys` are phrases for the simple
+   word matcher used while the model loads (the longest phrase found wins).
+   `topic` names the answer in a hedge ("I think maybe you're asking about
+   ..."); answers without one get the plain hedge. */
 const QA = [
   {
-    keys: ['who is katie', 'katie yeung', 'about katie', 'katie', 'shihong'],
+    id: 'katie', topic: 'Katie',
+    keys: ['who is katie', 'katie yeung', 'about katie', 'katie'],
+    examples: ['Who is Katie?', 'Tell me about Katie', 'Who is Katie Yeung?', 'How do you know Katie?', 'What was Katie like?',
+      'Who does this box belong to?', 'Tell me about your friend', 'Tell me more about her', 'Were you close to Katie?', 'How did you meet Katie?',
+      'Are you Katie’s friend?'],
     a: 'We grew up together, and we talked all the time. Katie was really active in our Titirangi community. She was very stressed the last times I saw her, I think about the chicken crisis. Katie was also a very talented researcher at C5 Biotech.'
   },
   {
+    id: 'c5', topic: 'C5 Biotech',
     keys: ['what is c5 biotech', 'c5 biotech', 'c five biotech', 'c5', 'c five'],
+    examples: ['What is C5 Biotech?', 'What does C5 do?', 'Where did Katie work?', 'What company did Katie work for?',
+      'What does the company do?', 'Tell me about the lab', 'What kind of research does C5 do?'],
     a: 'C5 Biotech is a biotechnology lab. I’m pretty sure they are involved in cancer research. But then it also had something do with the rats.'
   },
   {
-    keys: ['who is igor', 'igor kutznetsov', 'igor kuznetsov', 'kutznetsov', 'kuznetsov', 'igor'],
+    id: 'igor', topic: 'Igor',
+    keys: ['who is igor', 'igor kutznetsov', 'igor kuznetsov', 'kutznetsov', 'kuznetsov', 'igor', 'business card'],
+    examples: ['Who is Igor?', 'Who is Igor Kutznetsov?', 'Tell me about Igor Kuznetsov', 'Who is the Russian scientist?',
+      'Who did Katie meet at the conference?', 'Who is the man from Russia?'],
     a: 'I don’t know. Igor something. Maybe look him up on Linked In? Katie did say something about Russian scientists from a conference trip.'
   },
   {
+    id: 'linkedin', topic: 'looking Igor up',
     keys: ['cant find igor', 'cannot find igor', 'igor on linkedin', 'linkedin', 'linked in'],
+    examples: ['I can’t find Igor on LinkedIn', 'Igor isn’t on LinkedIn', 'I searched LinkedIn and found nothing',
+      'I looked for Igor online but couldn’t find him', 'I can’t find him anywhere online', 'I searched for Igor and found nothing',
+      'There are no results for Igor', 'How do I find out more about Igor?'],
     a: 'Have a look in the box. Maybe there is a business card?'
   },
   {
-    keys: ['harmful to humans', 'dangerous to humans', 'safe for humans', 'is the virus harmful', 'is the virus dangerous', 'is the virus safe', 'the virus'],
+    id: 'harmful', topic: 'whether the virus is safe',
+    keys: ['harmful to humans', 'dangerous to humans', 'safe for humans', 'is the virus harmful', 'is the virus dangerous', 'is the virus safe', 'is it safe', 'the virus'],
+    examples: ['Is the virus harmful to humans?', 'Is the virus safe?', 'Can the virus hurt people?', 'Is the virus dangerous?',
+      'Will the virus make people sick?', 'Is it safe to release the virus?', 'What will happen to people if I release the virus?',
+      'What would the virus do to humans?'],
     a: 'I’m not sure, I don’t understand the science really. I trust Katie, so I think it must be safe or she wouldn’t have wanted to release it. Maybe there’s some info in the box?'
   },
   {
-    keys: ['where is titirangi', 'what is titirangi', 'problem in titirangi', 'problem with the chickens', 'titirangi', 'chickens', 'chicken crisis'],
+    id: 'titirangi', topic: 'Titirangi and the rats',
+    keys: ['where is titirangi', 'what is titirangi', 'problem in titirangi', 'problem with the chickens', 'titirangi', 'chickens', 'chicken crisis', 'rat problem', 'the rats', 'rats', 'cnn'],
+    examples: ['Where is Titirangi?', 'What is the problem in Titirangi?', 'What is the rat problem?', 'Why are there so many rats?',
+      'What’s wrong with the chickens?', 'What is the chicken crisis?', 'Why do people hate the chickens?', 'Where is this village?'],
     a: 'Titirangi is a village in West Auckland. There are lots of chickens. Some people love them and others hate them because they attract rats. The case has been on C N N. There is a lot of info in the box, Katie pulled it all together for me.'
   },
   {
-    keys: ['rat problem', 'the rats', 'rats', 'cnn'],
-    a: 'Titirangi is a village in West Auckland. There are lots of chickens. Some people love them and others hate them because they attract rats. The case has been on C N N. There is a lot of info in the box, Katie pulled it all together for me.'
-  },
-  {
+    id: 'dubrovnik', topic: 'the conference in Dubrovnik',
     keys: ['conference in dubrovnik', 'the conference', 'dubrovnik', 'conference'],
+    examples: ['Tell me about the conference in Dubrovnik', 'What happened at the conference?', 'Why did Katie go to Dubrovnik?',
+      'When did Katie go to Croatia?', 'Tell me about her trip', 'Where did Katie travel to?'],
     a: 'Katie went to a conference in Dubrovnik in February. She showed me some pictures, it is so beautiful there. But for some reason it had stressed her out as well.'
   },
   {
-    keys: ['who is ken', 'her husband', 'ken', 'the kids', 'her family'],
+    id: 'ken', topic: 'Ken',
+    keys: ['who is ken', 'her husband', 'husband', 'married', 'ken', 'the kids', 'children', 'her family'],
+    examples: ['Who is Ken?', 'Who is Katie’s husband?', 'Does Katie have a family?', 'Where are Katie’s kids?',
+      'Is Katie married?', 'Who is in the family photo?', 'Where is her family now?', 'Tell me about Katie’s husband and kids'],
     a: 'Ken is Katie’s husband. They have two lovely small kids who go to the local kindy with my daughter. Ken is with the kids in Hong Kong at the moment, his Mum lives there.'
   },
   {
+    id: 'postit', topic: 'the note',
     keys: ['same alexa', 'post it note', 'post it', 'postit'],
+    examples: ['Are you the same Alexa as the one on the post-it note?', 'Are you the Alexa on the note?',
+      'The post-it mentions Alexa, is that you?', 'Is the Alexa in the email you?'],
     a: 'Yes I am'
   },
   {
+    id: 'infected', topic: 'whether the box is safe',
     keys: ['contents of the box', 'is the box infectious', 'can we be infected', 'can i be infected', 'infected', 'infectious'],
+    examples: ['Can we be infected by the contents of the box?', 'Is the box infectious?', 'Is it safe to touch the things in the box?',
+      'Could the box make me sick?', 'Is it safe to open the box?'],
     a: 'I think the box is harmless'
   },
   {
+    id: 'coins', topic: 'the coins',
     keys: ['what are the coins', 'are the coins euros', 'coins', 'euros'],
+    examples: ['What are the coins?', 'Are the coins euros?', 'Are the coins Russian?', 'Where are the coins from?',
+      'Why are there coins in the box?', 'What currency is the money?'],
     a: 'They are euros. I guess Katie had some left over from her trip to Dubrovnik'
   },
   {
+    id: 'tim',
     keys: ['who is tim', 'tim'],
+    examples: ['Who is Tim?', 'Who packed the box?', 'Who wrote the pink post-it?', 'Who is Katie’s manager?', 'Who is her boss?'],
     a: 'Tim? He is Katie’s long time colleague, oh wait I think he became the manager recently. He was Katie’s favourite colleague, we met a few times at barbeques.'
   },
   {
+    id: 'choose', topic: 'what to choose',
     keys: ['what should i choose', 'what would you choose', 'what do you think i should', 'what should i do', 'should i'],
+    examples: ['What should I choose?', 'What would you choose?', 'What do you think I should do?', 'Should I release it or destroy it?',
+      'Help me decide', 'What would you do in my place?', 'Should I release the virus?', 'Should I destroy the virus?', 'What is the right decision?', 'Which choice is the right one?'],
     a: 'Me? I trust Katie’s plan, but she clearly had some reservations because of surrounding events. You have the command codes, so the choice is clearly up to you.'
   },
   {
+    id: 'whoareyou', topic: 'me',
     keys: ['who are you', 'alexa gardner', 'your name'],
+    examples: ['Who are you?', 'What’s your name?', 'Who am I talking to?', 'Are you a real person?', 'Who is speaking?'],
     a: 'I am Alexa, Alexa Gardner. I am Katie’s childhood friend.'
   },
   {
-    keys: ['what is the chicken coop', 'chicken coop', 'how do i start', 'what am i supposed to do'],
+    id: 'coop', topic: 'how to start',
+    keys: ['what is the chicken coop', 'chicken coop', 'how do i start'],
+    examples: ['What is the chicken coop?', 'How do I start?', 'What does open the chicken coop mean?'],
     a: START_HINT
   },
   {
-    keys: ['what is this', 'what am i doing', 'how do i play'],
+    id: 'whatisthis', topic: 'what this is all about',
+    keys: ['what is this', 'what am i doing', 'how do i play', 'what am i supposed to do'],
+    examples: ['What is this?', 'What am I doing?', 'What is this game about?', 'Explain the game', 'How does this game work?', 'What am I supposed to do?'],
     a: 'A game. It’s about Katie Yeung, a scientist from C five biotech who has left behind only the contents of her desk. She was trying to solve the Chicken crisis in her community of Titirangi, and developed a virus that can eradicate only the rats. But now she’s gone, and the choice to release the virus or destroy the only sample is up to you.'
   },
   {
+    id: 'exit',
     keys: ['goodbye', 'bye', 'exit', 'quit'],
+    examples: ['Goodbye', 'Bye', 'I want to stop', 'I’m done for now', 'See you later'],
     a: EXIT
   }
 ];
@@ -145,6 +243,17 @@ const FALLBACKS = [
   'There is a lot of info in the box, Katie pulled it all together for me.',
   'Have a look in the box.'
 ];
+
+/* Said before a scripted answer when Alexa is fairly, but not fully, sure
+   what was asked. {topic} is the answer's topic. */
+const HEDGES = {
+  topic: 'I think maybe you’re asking about {topic}?',
+  plain: 'I’m not entirely sure, but…'
+};
+
+/* When a question is clearly about an item that no scripted answer covers.
+   {name} is the item's name. */
+const UNKNOWN_ITEM = 'I don’t know anything about {name}, sorry. Maybe something else in the box will explain it.';
 
 /* The command codes and Alexa's replies, from the Blueprint. */
 const CODES = {

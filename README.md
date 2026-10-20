@@ -11,6 +11,8 @@ Open the Chicken Coop
 
 [Play the browser demo](https://richdurham.github.io/chickencoop/demo/) — the whole game in one page: go through Katie's box, talk to Alexa, and say a command code. The box contents are web-sized copies of `Open-the-chicken-coop-game-files`, kept in [`demo/box/`](demo/box/), and the item list and Alexa's script live in [`demo/data.js`](demo/data.js).
 
+Alexa understands questions in plain language. A small sentence-embedding model (all-MiniLM-L6-v2, about 33 MB with its runtime, served from [`demo/model/`](demo/model/) and [`demo/lib/`](demo/lib/)) loads in the background once the box opens and compares each question with example questions for her scripted answers. When she's fairly but not fully sure, she hedges; if a question is about an item her script doesn't cover, she says so. Command codes are still matched word for word. Until the model is ready, or on devices that can't run it, she matches key words. To tune the example questions in `demo/data.js`, open the demo with `?debug` on the end of the address and watch the browser console.
+
 [PartyRock text AI chat version](https://partyrock.aws/u/richdurham/e1B7QinQ7/Alexa-Open-the-Chicken-Coop)
 
 [Weird Dopple.ai verson with vocal responses](https://beta.dopple.ai/profile/82513e14-ca2b-4238-9a5e-0905eb6d3597)
