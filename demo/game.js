@@ -77,7 +77,8 @@
   }
 
   function pageSrc(item, p) {
-    return item.cut ? 'box/cut/' + item.id + '.webp' : 'box/' + item.id + '-' + (p + 1) + '.jpg';
+    if (item.cut) return 'box/cut/' + item.id + (p ? '-' + (p + 1) : '') + '.webp';
+    return 'box/' + item.id + '-' + (p + 1) + '.jpg';
   }
 
   function pileSrc(item) {
@@ -254,10 +255,10 @@
   }
 
   function renderProgress() {
-    var n = state.opened.length;
-    $('progress').textContent = n === 0
-      ? 'Nothing looked at yet'
-      : 'You’ve looked at ' + n + ' of ' + ITEMS.length + ' things';
+    // Never a count, and never a plain "all": the box doesn't say what's left in it.
+    var f = ITEMS.filter(function (it) { return isOpened(it.id); }).length / ITEMS.length;
+    $('progress').textContent = 'Looked at: ' +
+      (f === 0 ? 'nothing' : f < 0.2 ? 'a few' : f < 0.45 ? 'some' : f < 0.75 ? 'many' : f < 1 ? 'most' : 'all?');
   }
 
   // ---------- In hand ----------
@@ -290,7 +291,8 @@
   function pageImg(pg) {
     var img = document.createElement('img');
     img.src = pageSrc(pg.item, pg.p);
-    img.alt = pg.item.label + (pg.label ? ', ' + pg.label.toLowerCase() : '') + '. ' + pg.item.caption;
+    // The caption describes what something is, seen from the front.
+    img.alt = pg.item.label + (pg.label ? ', ' + pg.label.toLowerCase() : '') + (pg.p ? '.' : '. ' + pg.item.caption);
     img.draggable = false;
     return img;
   }
@@ -347,7 +349,8 @@
 
   function showAt() {
     var pg = current();
-    $('reader-page').textContent = holding.item.reach && !stillInside(holding.item).length ? 'Nothing else inside' : pg.label;
+    var empty = holding.item.reach && !stillInside(holding.item).length;
+    $('reader-page').textContent = empty && !holding.turned ? 'Nothing else inside' : pg.label;
     $('reader-prev').disabled = holding.at === 0;
     $('reader-next').disabled = holding.at === holding.pages.length - 1;
     lastSeen = { id: pg.item.id, at: Date.now() };
