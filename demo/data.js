@@ -10,95 +10,116 @@ const INTRO_PHRASES = [
   'open chicken coop'
 ];
 
-/* Where things sit in the box. Order here is the order on the table. */
-const GROUPS = [
-  { id: 'lid', label: 'On the lid' },
-  { id: 'loose', label: 'Loose in the box' },
-  { id: 'stands', label: 'Katie’s photo stands' },
-  { id: 'folder', label: 'Project Cleansing Falcon folder' }
-];
-
-/* Each item's images are box/<id>-<n>.jpg, with a table thumbnail at
-   box/thumb/<id>.jpg (w x h). `sides` names the pages of two-sided things;
-   `ask` is a question Alexa has a scripted answer for; `credit` ({ text, href })
-   attributes a stand-in photo that didn't come from the real box.
+/* Each item's images are box/<id>-<n>.jpg, with a smaller copy at
+   box/thumb/<id>.jpg (w x h) for the pile. Items with `cut` were photographed
+   on a table and use background-free versions, box/cut/<id>.webp and
+   box/cut/thumb/<id>.webp. `in` puts an item inside another (the folder's
+   documents), so it is found by leafing through that, not on the pile.
+   `sides` names the pages of things that turn over or open (2 sides flip,
+   more leaf); `credit` ({ text, href }) attributes a stand-in photo that
+   didn't come from the real box.
    For understanding questions: `name` is how Alexa refers to the item,
    `about` says only what is visible on it (never shown or spoken; it helps
    tell which item a question is about), and `links` lists the QA answers
    the visible content plainly relates to. Links are the one place a puzzle
    could leak, so items whose meaning players are meant to work out have none. */
 const ITEMS = [
-  { id: 'lid-note', group: 'lid', label: 'Pink post-it', caption: 'Stuck to the top of the box, signed by Tim.', pages: 1, w: 560, h: 420, ask: 'Who is Tim?',
+  { id: 'lid-note', cut: true, label: 'Pink post-it', caption: 'Stuck to the top of the box, signed by Tim.', pages: 1, w: 560, h: 420,
     name: 'the pink post-it', links: ['tim', 'postit'],
     about: ['A pink post-it note stuck on the lid of the box, handwritten and signed Tim.', 'A handwritten note from Tim on top of the box.', 'It says Alexa called and asked for Katie\'s things to be packed up and sent to her, and that he packed it himself.'] },
-  { id: 'lid-inside', group: 'lid', label: 'Inside the lid', caption: 'Written on the underside of the lid.', pages: 1, w: 560, h: 420, ask: 'What is the chicken coop?',
+  { id: 'lid-inside', label: 'Inside the lid', caption: 'Written on the underside of the lid.', pages: 1, w: 560, h: 420,
     name: 'the writing inside the lid', links: ['coop'],
     about: ['Handwriting on the inside of the box lid that says: Alexa, open the chicken coop.'] },
 
-  { id: 'wrinkled-note', group: 'loose', label: 'Crumpled printout', caption: 'A printed email to Alexa, crumpled up, with a line written across it.', pages: 1, w: 433, h: 560, ask: 'Who is Katie?',
+  { id: 'wrinkled-note', cut: true, label: 'Crumpled printout', caption: 'A printed email to Alexa, crumpled up, with a line written across it.', pages: 1, w: 433, h: 560,
     name: 'the crumpled printout', links: ['katie', 'postit'],
     about: ['A crumpled printed email from Katie to Alexa about a delivery.', 'Handwriting across it says: ask Alexa to open the chicken coop.'] },
-  { id: 'kete', group: 'loose', label: 'Kete', caption: 'A small woven flax kete, with two tags on a chain and three clear capsules.', pages: 1, w: 420, h: 560, ask: 'Can we be infected by the contents of the box?',
+  { id: 'kete', cut: true, label: 'Kete', caption: 'A small woven flax kete, with two tags on a chain and three clear capsules.', pages: 1, w: 420, h: 560,
     name: 'the kete', links: [],
     about: ['A small woven flax kete, a Maori bag with handles.', 'Inside are two blank metal dog tags on a ball chain and three small clear plastic capsules.'] },
-  { id: 'kete-note', group: 'loose', label: 'Paper from the kete', caption: 'Folded inside the kete, dated in green ink.', pages: 1, w: 420, h: 560,
+  { id: 'kete-note', cut: true, label: 'Paper from the kete', caption: 'Folded inside the kete, dated in green ink.', pages: 1, w: 420, h: 560,
     name: 'the paper from the kete', links: [],
     about: ['A folded sheet of white paper with September 2018 written on it in green ink.'] },
-  { id: 'boarding-pass', group: 'loose', label: 'Boarding pass', caption: 'A boarding pass.', pages: 1, w: 560, h: 231,
+  { id: 'boarding-pass', label: 'Boarding pass', caption: 'A boarding pass.', pages: 1, w: 560, h: 231,
     name: 'the boarding pass', links: [],
     about: ['A red and white airline boarding pass for a flight from Moscow to Auckland on 12 November 2018.'] },
-  { id: 'coins', group: 'loose', label: 'Coins', caption: 'A handful of loose coins.', pages: 1, w: 560, h: 374, ask: 'What are the coins?',
+  { id: 'coins', label: 'Coins', caption: 'A handful of loose coins.', pages: 1, w: 560, h: 374,
     credit: { text: 'Stand-in photo (the box’s coins were lost): rawpixel, public domain (CC0 1.0)', href: 'https://www.rawpixel.com/image/6034993/photo-image-background-public-domain-golden' },
     name: 'the coins', links: ['coins'],
     about: ['A handful of loose euro coins.'] },
-  { id: 'certificate', group: 'loose', label: 'Certificate', caption: 'A certificate of achievement.', pages: 1, w: 560, h: 378, ask: 'What is C5 Biotech?',
+  { id: 'certificate', label: 'Certificate', caption: 'A certificate of achievement.', pages: 1, w: 560, h: 378,
     name: 'the certificate', links: [],
     about: ['A certificate of achievement with a blue patterned border, a gold seal and two signatures, for contributions to science.'] },
-  { id: 'plant', group: 'loose', label: 'Plant cutting', caption: 'A cutting with a handwritten label around the stem.', pages: 1, w: 420, h: 560, ask: 'Is the virus harmful to humans?',
+  { id: 'plant', cut: true, label: 'Plant cutting', caption: 'A cutting with a handwritten label around the stem.', pages: 1, w: 420, h: 560,
     name: 'the plant cutting', links: [],
     about: ['A cutting of a green plant with curly fern-like shoots.', 'A handwritten paper label is wrapped around the stem.'] },
-  { id: 'glasses', group: 'loose', label: 'Glasses', caption: 'A pair of glasses.', pages: 1, w: 560, h: 420,
+  { id: 'glasses', cut: true, label: 'Glasses', caption: 'A pair of glasses.', pages: 1, w: 560, h: 420,
     name: 'the glasses', links: [],
     about: ['A pair of black-framed glasses.'] },
-  { id: 'mug', group: 'loose', label: 'Mug', caption: 'An empty mug.', pages: 1, w: 420, h: 560,
+  { id: 'mug', cut: true, label: 'Mug', caption: 'An empty mug.', pages: 1, w: 420, h: 560,
     name: 'the mug', links: [],
     about: ['An empty white mug with black stripes.'] },
 
-  { id: 'family-photo', group: 'stands', label: 'Family photo', caption: 'A family portrait in a photo stand.', pages: 1, w: 362, h: 560, ask: 'Who is Ken?',
+  { id: 'family-photo', label: 'Family photo', caption: 'A family portrait in a photo stand.', pages: 1, w: 362, h: 560,
     name: 'the family photo', links: ['ken', 'katie'],
     about: ['A family portrait in a photo stand: a man and a woman, both wearing glasses, with a young boy and a little girl.'] },
-  { id: 'summer-school', group: 'stands', label: 'Group photo, with notes', caption: 'A group outside a building. There’s writing on the back.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 314, ask: 'Who is Igor Kutznetsov?',
+  { id: 'summer-school', label: 'Group photo, with notes', caption: 'A group outside a building. There’s writing on the back.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 314,
     name: 'that group photo', links: ['igor'],
     about: ['A group photo of about a dozen people standing outside a large building.', 'Handwritten notes on the back mention Igor, Korsakov and a 1995 summer school in Novosibirsk.'] },
-  { id: 'who-trip', group: 'stands', label: 'Group photo on the steps', caption: 'A group on some steps. There’s writing on the back.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 397, ask: 'What is C5 Biotech?',
+  { id: 'who-trip', label: 'Group photo on the steps', caption: 'A group on some steps. There’s writing on the back.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 397,
     name: 'the photo on the steps', links: ['c5'],
     about: ['A group photo of people standing on the steps outside a building with World Health Organization logos.', 'Written on the back: C5, WHO trip, September 2017.'] },
-  { id: 'card', group: 'stands', label: 'Get-well card', caption: 'A card in an envelope addressed to Katie, signed by her colleagues.', pages: 4, sides: ['Envelope', 'Front', 'Inside', 'Back'], w: 560, h: 485, ask: 'Who is Tim?',
+  { id: 'card', label: 'Get-well card', caption: 'A card in an envelope addressed to Katie, signed by her colleagues.', pages: 4, sides: ['Envelope', 'Front', 'Inside', 'Back'], w: 560, h: 485,
     name: 'the get-well card', links: ['tim'],
     about: ['A floral get well soon card in an envelope addressed to Katie.', 'Inside it is signed by her colleagues, including Tim, Barbara, Josh and Tony.', 'A greeting card with handwritten messages from her workmates.'] },
 
-  { id: 'folder-cover', group: 'folder', label: 'The folder', caption: 'A black ring binder with a handwritten spine.', pages: 1, w: 433, h: 560, ask: 'What is this?',
+  { id: 'folder-cover', label: 'The folder', caption: 'A black ring binder with a handwritten spine.', pages: 1, w: 433, h: 560,
     name: 'the folder', links: [],
     about: ['A black ring binder with Project Cleansing Falcon handwritten in red on the spine.'] },
-  { id: 'council', group: 'folder', label: 'Auckland Council printout', caption: 'A council news article, with notes.', pages: 2, w: 396, h: 560, ask: 'What is the problem in Titirangi?',
+  { id: 'council', in: 'folder-cover', label: 'Auckland Council printout', caption: 'A council news article, with notes.', pages: 2, w: 396, h: 560,
     name: 'the council printout', links: ['titirangi'],
     about: ['A printed Auckland Council news article about wild chickens and rats in Titirangi, with highlighting and handwritten notes.'] },
-  { id: 'cnn', group: 'folder', label: 'CNN printout', caption: 'A CNN article, with notes.', pages: 4, w: 396, h: 560, ask: 'What is the rat problem?',
+  { id: 'cnn', in: 'folder-cover', label: 'CNN printout', caption: 'A CNN article, with notes.', pages: 4, w: 396, h: 560,
     name: 'the CNN printout', links: ['titirangi'],
     about: ['A printed CNN article about a rat infestation in the New Zealand suburb of Titirangi, with highlighting and handwritten notes.'] },
-  { id: 'medical', group: 'folder', label: 'Medical News Today printout', caption: 'A Medical News Today article, with notes.', pages: 3, w: 396, h: 560, ask: 'Is the virus harmful to humans?',
+  { id: 'medical', in: 'folder-cover', label: 'Medical News Today printout', caption: 'A Medical News Today article, with notes.', pages: 3, w: 396, h: 560,
     name: 'the Medical News Today printout', links: [],
     about: ['A printed Medical News Today article about a virus that could help destroy cancer, with highlighting and handwritten notes.'] },
-  { id: 'business-card', group: 'folder', label: 'Business card', caption: 'A copy of a business card, with a note.', pages: 1, w: 396, h: 560, ask: 'I can’t find Igor on LinkedIn',
+  { id: 'business-card', in: 'folder-cover', label: 'Business card', caption: 'A copy of a business card, with a note.', pages: 1, w: 396, h: 560,
     name: 'the business card', links: ['igor', 'linkedin'],
     about: ['A photocopy of a business card for Igor Kuznetsov, a regional manager at a biotechnology company, with a handwritten note beside it.'] },
-  { id: 'emails', group: 'folder', label: 'Printed emails', caption: 'Two printed emails.', pages: 2, w: 396, h: 560, ask: 'Tell me about the conference in Dubrovnik',
+  { id: 'emails', in: 'folder-cover', label: 'Printed emails', caption: 'Two printed emails.', pages: 2, w: 396, h: 560,
     name: 'the printed emails', links: ['igor', 'dubrovnik'],
     about: ['Two printed emails: one between Katie and Igor Kuznetsov after a conference in Dubrovnik, and one to Miss Yeung about an agreement.'] },
-  { id: 'nova', group: 'folder', label: 'NOVA Online printout', caption: 'A NOVA Online interview, with notes.', pages: 4, w: 396, h: 560,
+  { id: 'nova', in: 'folder-cover', label: 'NOVA Online printout', caption: 'A NOVA Online interview, with notes.', pages: 4, w: 396, h: 560,
     name: 'the NOVA printout', links: [],
     about: ['A printed NOVA Online interview with two scientists, with highlighting, handwritten notes and a blue sticky note.'] }
 ];
+
+/* How the box looks when first opened, bottom of the pile first. Each entry is
+   [x, y, width, angle]: x and y are where the item's centre sits inside the
+   box (0-100 across and down; beyond that is the table around it), width is
+   a percentage of the box's width, angle is in degrees. The lid lies outside
+   the box, so it has its own place for wide and narrow screens. Players move
+   everything; their arrangement is saved, this is only the start. */
+const PILE = [
+  ['certificate', 34, 68, 47, -8],
+  ['card', 75, 73, 34, 12],
+  ['folder-cover', 50, 45, 47, 24],
+  ['who-trip', 78, 20, 33, -4],
+  ['family-photo', 22, 20, 20, 6],
+  ['summer-school', 45, 12, 33, -9],
+  ['kete-note', 81, 45, 13, -14],
+  ['kete', 86, 49, 25, 8],
+  ['boarding-pass', 25, 87, 34, 4],
+  ['plant', 14, 55, 15, -20],
+  ['glasses', 61, 86, 24, -12],
+  ['mug', 90, 90, 17, 0],
+  ['coins', 69, 58, 22, 0],
+  ['wrinkled-note', 34, 40, 28, -14],
+  ['lid-note', 59, 30, 16, 9]
+];
+const LID = { id: 'lid-inside', wide: [123, 50, 53, -88], tall: [50, 125, 60, -3] };
 
 /* Alexa Blueprint: welcome and exit. */
 const WELCOME = [

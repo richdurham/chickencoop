@@ -47,14 +47,18 @@
     </header>
 
     <div class="tabs" role="tablist" aria-label="View">
-      <button id="tab-box" class="tabs__tab" role="tab" aria-selected="true" aria-controls="box" type="button">The box</button>
-      <button id="tab-alexa" class="tabs__tab" role="tab" aria-selected="false" aria-controls="alexa" type="button">Alexa <span id="tab-alexa-new" class="tabs__new" hidden>new</span></button>
+      <button id="tab-alexa" class="tabs__tab" role="tab" aria-selected="true" aria-controls="alexa" type="button">Alexa <span id="tab-alexa-new" class="tabs__new" hidden>new</span></button>
+      <button id="tab-box" class="tabs__tab" role="tab" aria-selected="false" aria-controls="box" type="button">The box</button>
     </div>
 
-    <div class="stage" data-view="box">
-      <section id="box" class="box" aria-label="Contents of the box" role="tabpanel">
-        <p class="box__hint">Pick anything up to look at it closely. When you&rsquo;re ready, give Alexa one of Katie&rsquo;s command codes.</p>
-        <div id="groups"></div>
+    <div class="stage" data-view="alexa">
+      <!-- The open box on the table. Things are placed by game.js from PILE in data.js. -->
+      <section id="box" class="box" aria-label="Katie’s box" role="tabpanel">
+        <div id="desk" class="desk">
+          <div id="carton" class="carton" aria-hidden="true"></div>
+          <p id="desk-hint" class="desk__hint" hidden>Move things to see what&rsquo;s underneath. Tap anything to pick it up.</p>
+        </div>
+        <p id="thing-help" class="sr-only">Press Enter to pick it up. Use the arrow keys to move it.</p>
       </section>
 
       <aside id="alexa" class="alexa" aria-label="Talk to Alexa" role="tabpanel">
@@ -66,7 +70,6 @@
           </div>
         </header>
         <ol id="log" class="log" aria-live="polite" aria-relevant="additions"></ol>
-        <div id="chips" class="chips" aria-label="Things you could ask"></div>
         <div id="codes" class="codes">
           <p class="codes__label">Katie&rsquo;s command codes</p>
           <div class="codes__row">
@@ -83,32 +86,31 @@
     </div>
   </main>
 
-  <!-- Looking at an item up close. -->
+  <!-- Something picked up from the box: turn it over, leaf through it, look closer. -->
   <div id="reader" class="reader" role="dialog" aria-modal="true" aria-labelledby="reader-title" hidden>
     <div class="reader__backdrop" data-close></div>
     <div class="reader__sheet">
       <header class="reader__head">
         <div>
           <h2 id="reader-title" class="reader__title"></h2>
-          <p id="reader-caption" class="reader__caption"></p>
           <p id="reader-credit" class="reader__credit" hidden></p>
         </div>
         <button type="button" class="reader__x" data-close aria-label="Put it back">&times;</button>
       </header>
       <div id="reader-view" class="reader__view">
-        <img id="reader-img" class="reader__img" alt="">
+        <div id="hand" class="hand"></div>
       </div>
-      <nav id="reader-pager" class="reader__pager" aria-label="Pages">
-        <button id="reader-prev" type="button" class="btn btn--quiet">Previous</button>
-        <p id="reader-page" class="reader__page" aria-live="polite"></p>
-        <button id="reader-next" type="button" class="btn btn--quiet">Next</button>
-      </nav>
+      <p id="reader-page" class="reader__page" aria-live="polite"></p>
       <footer class="reader__foot">
+        <div class="reader__moves">
+          <button id="reader-prev" type="button" class="btn btn--quiet">Previous page</button>
+          <button id="reader-turn" type="button" class="btn btn--paper">Turn it over</button>
+          <button id="reader-next" type="button" class="btn btn--paper">Next page</button>
+        </div>
         <div class="reader__tools">
-          <button id="reader-zoom" type="button" class="btn btn--quiet" aria-pressed="false">Zoom in</button>
+          <button id="reader-zoom" type="button" class="btn btn--quiet" aria-pressed="false">Look closer</button>
           <a id="reader-full" class="reader__full" target="_blank" rel="noopener">Open full size</a>
         </div>
-        <button id="reader-ask" type="button" class="btn btn--device">Ask Alexa about this</button>
       </footer>
     </div>
   </div>
