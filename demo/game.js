@@ -643,7 +643,6 @@
     $('ask-input').disabled = locked;
     $('ask-mic').disabled = locked;
     $('ask').querySelector('button[type="submit"]').disabled = locked;
-    $('codes').hidden = locked;
   }
 
   // ---------- Talking out loud (voice.js does the listening and speaking) ----------
@@ -977,7 +976,7 @@
         Object.assign(at(mid, turn(p[3] / 2, 110, 1.12)), { offset: 0.6 }),
         at(to, turn(p[3], 180, 1))
       ];
-      return cover.animate(frames, { duration: 1700, easing: 'cubic-bezier(.45,.05,.3,1)', fill: 'forwards' }).finished;
+      return cover.animate(frames, { duration: 2600, easing: 'cubic-bezier(.45,.05,.3,1)', fill: 'forwards' }).finished;
     }).catch(function () { /* if it can't animate, the lid is simply off */ }).then(function () {
       cover.remove();
       lid.style.visibility = '';
@@ -1077,16 +1076,6 @@
     $('voice-toggle').addEventListener('click', function () {
       Voice.setVoiceOn(!Voice.voiceOn());
       renderVoiceToggle();
-    });
-
-    // The code buttons only fill in the line; saying it is still up to the player.
-    Array.prototype.forEach.call(document.querySelectorAll('.code'), function (btn) {
-      btn.textContent = CODES[btn.dataset.code].short;
-      btn.addEventListener('click', function () {
-        var input = $('ask-input');
-        input.value = btn.textContent;
-        input.focus();
-      });
     });
 
     $('reader').addEventListener('click', function (e) {

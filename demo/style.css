@@ -667,37 +667,6 @@ img { display: block; max-width: 100%; }
   50% { opacity: 1; transform: translateY(-2px); }
 }
 
-/* The two codes sit apart from the input: saying one ends the game. */
-.codes {
-  padding: 0.75rem 1.25rem 0.85rem;
-  border-top: 1px solid rgba(134,163,168,0.18);
-}
-
-.codes__label {
-  margin: 0 0 0.45rem;
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--voice-dim);
-}
-
-.codes__row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.code {
-  cursor: pointer;
-  border: 1px solid rgba(242,210,122,0.4);
-  background: rgba(242,210,122,0.06);
-  color: #F3E3B4;
-  border-radius: 4px;
-  padding: 0.35rem 0.65rem;
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-}
-.code:hover { background: rgba(242,210,122,0.14); }
-
 .ask {
   display: flex;
   gap: 0.5rem;
@@ -1027,7 +996,6 @@ img { display: block; max-width: 100%; }
   .alexa { margin: 0.75rem; border-radius: 14px; }
   .alexa__head { padding: 0.75rem 1rem; }
   .log { padding: 1rem; }
-  .codes { padding: 0.65rem 1rem 0.75rem; }
   .ask { padding: 0 0.75rem 0.75rem; }
   .ask__input { font-size: 1rem; } /* 16px keeps iOS from zooming on focus */
 

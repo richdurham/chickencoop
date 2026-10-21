@@ -65,6 +65,12 @@ const ITEMS = [
   { id: 'mug', cut: true, label: 'Mug', caption: 'An empty mug.', pages: 1, w: 420, h: 560,
     name: 'the mug', links: [],
     about: ['An empty white mug with black stripes.'] },
+  { id: 'release-slip', cut: true, label: 'Strip of paper', caption: 'A strip torn off a lined notepad, with something written on it.', pages: 1, w: 560, h: 182,
+    name: 'the strip of paper', links: ['choose'],
+    about: ['A strip of lined paper torn off a notepad, handwritten: Release falcon 616.', 'One of the command codes, written down.'] },
+  { id: 'destroy-slip', cut: true, label: 'Scrap of paper', caption: 'A torn scrap of paper, folded in half, with something written on it.', pages: 1, w: 560, h: 468,
+    name: 'the scrap of paper', links: ['choose'],
+    about: ['A torn scrap of plain paper, folded in half, handwritten: Destroy falcon 264.', 'One of the command codes, written down.'] },
 
   { id: 'family-photo', label: 'Family photo', caption: 'A family portrait in a photo stand.', pages: 1, w: 362, h: 560,
     name: 'the family photo', links: ['ken', 'katie'],
@@ -110,8 +116,11 @@ const ITEMS = [
    box (0-100 across and down; beyond that is the table around it), width is
    a percentage of the box's width, angle is in degrees. The lid lies outside
    the box, so it has its own place for wide and narrow screens. Players move
-   everything; their arrangement is saved, this is only the start. */
+   everything; their arrangement is saved, this is only the start.
+   Katie's two command codes are on slips at the bottom, for players to find. */
 const PILE = [
+  ['release-slip', 58, 78, 30, 7],
+  ['destroy-slip', 55, 38, 17, -12],
   ['certificate', 34, 68, 47, -8],
   ['envelope', 75, 73, 34, 12],
   ['folder-cover', 50, 45, 47, 24],
