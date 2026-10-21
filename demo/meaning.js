@@ -8,12 +8,15 @@ const base = new URL('./', import.meta.url);
 const CACHE = 'chickencoop-meaning-v1';
 const BATCH = 16;
 let started = false;
+let settled = false; // ready, or given up on
 
 async function start() {
   if (started) return;
   started = true;
-  if (!('WebAssembly' in window)) return;
-  if (navigator.connection && navigator.connection.saveData) return; // ~33 MB is a lot on a metered connection
+  if (!('WebAssembly' in window) || (navigator.connection && navigator.connection.saveData)) { // ~33 MB is a lot on a metered connection
+    settled = true;
+    return;
+  }
 
   try {
     const { pipeline, env } = await import(new URL('lib/transformers.min.js', base).href);
@@ -28,9 +31,12 @@ async function start() {
     const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { dtype: 'q8', device: 'wasm' });
     const embed = async text => Array.from((await extractor(text, { pooling: 'mean', normalize: true })).data);
     const index = window.Understand.buildIndex(await anchorVectors(extractor));
+    settled = true;
     window.dispatchEvent(new CustomEvent('chickencoop:meaning-ready', { detail: { embed, index } }));
   } catch (e) {
+    settled = true;
     console.warn('Alexa is matching words only, because the sentence model did not load:', e);
+    window.dispatchEvent(new CustomEvent('chickencoop:meaning-failed'));
   }
 }
 
@@ -89,5 +95,6 @@ function save(key, vectors) {
   } catch (e) { /* storage full or blocked: fine */ }
 }
 
-window.Meaning = { start };
+// loading: started and not yet ready or given up on, so a question can wait a moment for it.
+window.Meaning = { start, get loading() { return started && !settled; } };
 if (window.MeaningWanted) start();
