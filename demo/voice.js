@@ -110,23 +110,26 @@
   var listening = null; // the attempt in progress: { stop, cancel }
 
   /* ui: onListening(), onHeard(textSoFar), onWaiting(fraction downloaded),
-     onWorking(), onDone(text), onFail('nothing' | 'again' | 'blocked' | 'unavailable'). */
-  function listen(ui) {
+     onWorking(), onDone(text), onFail('nothing' | 'again' | 'blocked' | 'unavailable').
+     opts.hold: the player is holding a key down, so keep listening through
+     pauses until stop(). */
+  function listen(ui, opts) {
     if (listening) return;
+    var hold = !!(opts && opts.hold);
     hush();
-    if (builtIn) listenBuiltIn(ui);
-    else if (canRecord) listenRecorded(ui);
+    if (builtIn) listenBuiltIn(ui, hold);
+    else if (canRecord) listenRecorded(ui, hold);
     else ui.onFail('unavailable');
   }
 
   function stop() { if (listening) listening.stop(); }
   function cancel() { if (listening) listening.cancel(); }
 
-  function listenBuiltIn(ui) {
+  function listenBuiltIn(ui, hold) {
     var rec = new Recognition(), heard = '', failed = null, cancelled = false, began = false, over = false;
     rec.lang = /^en/i.test(navigator.language) ? navigator.language : 'en-NZ';
     rec.interimResults = true;
-    rec.continuous = false; // it stops by itself when they pause
+    rec.continuous = hold; // otherwise it stops by itself when they pause
     rec.maxAlternatives = 1;
     var attempt = {
       stop: function () {
@@ -155,7 +158,7 @@
         // in this app): record and use Whisper instead, from now on. If the
         // microphone itself turns out to be blocked, that was the problem.
         builtIn = false;
-        listenRecorded(ui, function () { builtIn = failed === 'not-allowed'; });
+        listenRecorded(ui, hold, function () { builtIn = failed === 'not-allowed'; });
         return;
       }
       if (heard) ui.onDone(heard);
@@ -183,7 +186,7 @@
       over = true;
       listening = null;
       builtIn = false;
-      listen(ui);
+      listen(ui, { hold: hold });
     }
   }
 
@@ -195,7 +198,7 @@
 
   /* Record until they stop talking (or tap again), then transcribe. The audio
      context is made here, during the tap, because iPhones only start one then. */
-  function listenRecorded(ui, onBlocked) {
+  function listenRecorded(ui, hold, onBlocked) {
     var ctx = new AudioCtx();
     if (ctx.resume) ctx.resume();
     startWorker();
@@ -220,7 +223,7 @@
         floor = Math.min(floor, level);
         if (level > Math.max(0.01, Math.min(0.05, floor * 3))) { loud += secs; quiet = 0; if (loud > 0.15) voiced = true; }
         else quiet += secs;
-        if ((voiced && quiet > 1) || (!voiced && total > 7) || total > 15) finish();
+        if (hold ? total > 30 : (voiced && quiet > 1) || (!voiced && total > 7) || total > 15) finish();
       };
       source.connect(node);
       node.connect(ctx.destination); // silent: needed for the recording to run
@@ -347,9 +350,23 @@
     });
   }
 
+  /* Ask for the microphone now (the player chose to talk on their first visit),
+     so talking later doesn't stop for the browser's question. */
+  function requestMic() {
+    if (!canRecord && !builtIn) return Promise.resolve('unavailable');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return Promise.resolve('granted'); // asked when they first talk
+    return navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
+      s.getTracks().forEach(function (t) { t.stop(); });
+      return 'granted';
+    }, function (err) {
+      return err && (err.name === 'NotAllowedError' || err.name === 'SecurityError') ? 'denied' : 'unavailable';
+    });
+  }
+
   window.Voice = {
     canSpeak: canSpeak, voiceOn: voiceOn, setVoiceOn: setVoiceOn, say: say, hush: hush,
     canListen: builtIn || canRecord, listen: listen, stop: stop, cancel: cancel,
-    isListening: function () { return !!listening; }
+    isListening: function () { return !!listening; },
+    micPermission: micPermission, requestMic: requestMic
   };
 })();

@@ -62,6 +62,10 @@
           <p id="desk-hint" class="desk__hint" hidden>Move things to see what&rsquo;s underneath. Tap anything to pick it up.</p>
         </div>
         <p id="thing-help" class="sr-only">Press Enter to pick it up. Use the arrow keys to move it.</p>
+        <!-- On a phone, Alexa's panel is a tab away: talk to her from here. -->
+        <button id="box-mic" type="button" class="mic box__mic" aria-label="Talk to Alexa" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 14.5a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5.5a3 3 0 0 0 3 3Z" fill="currentColor"/><path d="M18 11.5a6 6 0 0 1-12 0M12 17.5V21M8.5 21h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
       </section>
 
       <aside id="alexa" class="alexa" aria-label="Talk to Alexa" role="tabpanel">
@@ -105,7 +109,12 @@
           <h2 id="reader-title" class="reader__title"></h2>
           <p id="reader-credit" class="reader__credit" hidden></p>
         </div>
-        <button type="button" class="reader__x" data-close aria-label="Put it back">&times;</button>
+        <div class="reader__actions">
+          <button id="reader-mic" type="button" class="mic reader__mic" aria-label="Talk to Alexa" aria-pressed="false" title="Ask Alexa about it (or hold Space)">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 14.5a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5.5a3 3 0 0 0 3 3Z" fill="currentColor"/><path d="M18 11.5a6 6 0 0 1-12 0M12 17.5V21M8.5 21h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+          <button type="button" class="reader__x" data-close aria-label="Put it back">&times;</button>
+        </div>
       </header>
       <div id="reader-view" class="reader__view">
         <div id="hand" class="hand"></div>
@@ -141,6 +150,33 @@
 
   <!-- Listening and speaking: what the microphone heard, for screen readers. -->
   <p id="voice-status" class="sr-only" aria-live="polite"></p>
+
+  <!-- What was said, over the box or something in hand, while Alexa's panel is out of sight. -->
+  <div id="subtitle" class="subtitle" aria-hidden="true" hidden>
+    <span id="subtitle-who" class="subtitle__who"></span>
+    <span id="subtitle-text" class="subtitle__text"></span>
+  </div>
+
+  <!-- First visit: talk to Alexa, or type? -->
+  <div id="setup" class="setup" role="dialog" aria-modal="true" aria-labelledby="setup-title" aria-describedby="setup-about" hidden>
+    <div class="setup__card">
+      <h2 id="setup-title" class="setup__title">Talk with Alexa?</h2>
+      <p id="setup-about" class="setup__about">This game works best with a microphone and speakers: Alexa talks, and you can talk back to her.</p>
+      <div class="setup__choices">
+        <button id="setup-voice" type="button" class="setup__choice setup__choice--voice">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 14.5a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5.5a3 3 0 0 0 3 3Z" fill="currentColor"/><path d="M18 11.5a6 6 0 0 1-12 0M12 17.5V21M8.5 21h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span class="setup__name">Microphone and speakers</span>
+          <span class="setup__what">Hear Alexa, and talk to her. On a keyboard, hold Space to talk from anywhere.</span>
+        </button>
+        <button id="setup-text" type="button" class="setup__choice">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 10h1.5M10 10h1.5M14 10h1.5M18 10h.5M7.5 14h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span class="setup__name">Keyboard and text</span>
+          <span class="setup__what">Read Alexa’s replies and type yours. You can turn her voice on later.</span>
+        </button>
+      </div>
+      <p id="setup-note" class="setup__note" aria-live="polite"></p>
+    </div>
+  </div>
 
   <script src="data.js"></script>
   <script src="understand.js"></script>
