@@ -1,0 +1,8 @@
+[["what is this strip of paper", "choose", null, "B"],
+ ["what's written on this scrap of paper", "choose", null, "B"],
+ ["where are the command codes", "choose", null, "A"],
+ ["what does falcon 264 mean", "choose", null, "B"],
+ ["what's this?", "choose", "release-slip", "C"],
+ ["who wrote this?", "choose", "destroy-slip", "C"],
+ ["what's the paper from the kete", "unknown:kete-note", null, "B"],
+ ["what is the crumpled printout", ["katie", "postit"], null, "B"]]
