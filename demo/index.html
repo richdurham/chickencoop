@@ -86,7 +86,7 @@
     </div>
   </main>
 
-  <!-- Something picked up from the box: turn it over, leaf through it, look closer. -->
+  <!-- Something picked up from the box: reach into it, turn it over, leaf through it, look closer. -->
   <div id="reader" class="reader" role="dialog" aria-modal="true" aria-labelledby="reader-title" hidden>
     <div class="reader__backdrop" data-close></div>
     <div class="reader__sheet">
@@ -103,13 +103,13 @@
       <p id="reader-page" class="reader__page" aria-live="polite"></p>
       <footer class="reader__foot">
         <div class="reader__moves">
+          <button id="reader-reach" type="button" class="btn btn--paper" hidden></button>
           <button id="reader-prev" type="button" class="btn btn--quiet">Previous page</button>
           <button id="reader-turn" type="button" class="btn btn--paper">Turn it over</button>
           <button id="reader-next" type="button" class="btn btn--paper">Next page</button>
         </div>
         <div class="reader__tools">
           <button id="reader-zoom" type="button" class="btn btn--quiet" aria-pressed="false">Look closer</button>
-          <a id="reader-full" class="reader__full" target="_blank" rel="noopener">Open full size</a>
         </div>
       </footer>
     </div>
