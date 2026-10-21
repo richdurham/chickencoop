@@ -1,16 +1,20 @@
 /* Open the Chicken Coop — talking with Alexa out loud.
-   Speaking: the browser reads Alexa's lines aloud (speech synthesis), unless
-   the player turns her voice off. Listening: the browser's own speech
-   recognition where it works (Chrome, Edge, Safari); everywhere else, the
-   page records the player and Whisper (listen-worker.js) turns it into text,
-   downloaded the first time someone talks. game.js wires up the buttons. */
+   Speaking: Alexa's lines are recorded (voice/alexa/, made by
+   tools/alexa-voice) and played, unless the player turns her voice off; any
+   line without a recording is read by the browser's own voice. Listening: the
+   browser's own speech recognition where it works (Chrome, Edge, Safari);
+   everywhere else, the page records the player and Whisper (listen-worker.js)
+   turns it into text, downloaded the first time someone talks. game.js wires
+   up the buttons. */
 (function () {
   'use strict';
 
   // ---------- Alexa's voice ----------
 
   var synth = window.speechSynthesis;
-  var canSpeak = !!(synth && window.SpeechSynthesisUtterance);
+  var canSynth = !!(synth && window.SpeechSynthesisUtterance);
+  var canPlay = !!window.Audio;
+  var canSpeak = canSynth || canPlay;
   var PREF = 'chickencoop-voice'; // 'off' once the player turns her voice off; kept through Start over
   var voice = null;
   var talking = null;  // the line she is saying: { finish }
@@ -23,6 +27,85 @@
   function setVoiceOn(on) {
     try { localStorage.setItem(PREF, on ? 'on' : 'off'); } catch (e) { /* only for this visit then */ }
     if (!on) hush();
+  }
+
+  /* Her recordings: voice/alexa/lines.json maps each line's text to its clip.
+     One audio element plays them all, because iPhones let an element play by
+     itself only once it has played during a tap. */
+  var CLIPS = 'voice/alexa/';
+  var clips = null, clipTexts = [];
+  var player = canPlay ? new Audio() : null;
+
+  if (player && window.fetch) {
+    fetch(CLIPS + 'lines.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
+      if (!m || !m.lines) return;
+      clips = m.lines;
+      clipTexts = Object.keys(clips).sort(function (a, b) { return b.length - a.length; });
+    }).catch(function () { /* the browser's voice reads everything */ });
+  }
+
+  /* The recordings that make up a reply, in order: usually one, but a hedged
+     answer is the hedge and then the answer. Null if any of it isn't recorded. */
+  function clipsFor(text) {
+    if (!clips) return null;
+    var files = [], rest = String(text).trim();
+    while (rest) {
+      var hit = null;
+      for (var i = 0; i < clipTexts.length && !hit; i++) if (rest.indexOf(clipTexts[i]) === 0) hit = clipTexts[i];
+      if (!hit) return null;
+      files.push(CLIPS + clips[hit]);
+      rest = rest.slice(hit.length).trim();
+    }
+    return files.length ? files : null;
+  }
+
+  // Fetch recordings she is about to need (the welcome, while the box opens), so she starts on time.
+  function prepare(texts) {
+    if (!window.fetch) return;
+    texts.forEach(function (t) { (clipsFor(t) || []).forEach(function (f) { fetch(f).catch(function () {}); }); });
+  }
+
+  /* Say a line. Resolves when she has finished, been hushed, or (in case the
+     browser never says it finished) after about as long as it should take. */
+  function say(text) {
+    if (!canSpeak || !voiceOn() || listening) return Promise.resolve();
+    var files = player && clipsFor(text);
+    return files ? play(files, text) : read(text);
+  }
+
+  function play(files, text) {
+    return new Promise(function (resolve) {
+      var at = 0, finished = false;
+      var finish = function () {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        player.onended = player.onerror = null;
+        if (talking && talking.finish === finish) talking = null;
+        resolve();
+      };
+      // A recording that won't play (blocked, or missing): the browser's voice says it instead.
+      var instead = function () {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        player.onended = player.onerror = null;
+        if (talking && talking.finish === finish) talking = null;
+        read(text).then(resolve);
+      };
+      var timer = setTimeout(finish, 6000 + text.length * 90);
+      var next = function () {
+        if (finished) return;
+        if (at >= files.length) { finish(); return; }
+        player.src = files[at++];
+        var started = player.play();
+        if (started && started.catch) started.catch(function (e) { if (!e || e.name !== 'AbortError') instead(); });
+      };
+      talking = { finish: finish };
+      player.onended = function () { setTimeout(next, 150); }; // a breath between the hedge and the answer
+      player.onerror = instead;
+      next();
+    });
   }
 
   /* Alexa lives in Titirangi: a New Zealand voice if the device has one, then
@@ -46,7 +129,7 @@
     return best;
   }
 
-  if (canSpeak && synth.addEventListener) synth.addEventListener('voiceschanged', function () { voice = pickVoice(); });
+  if (canSynth && synth.addEventListener) synth.addEventListener('voiceschanged', function () { voice = pickVoice(); });
 
   // How her lines should sound rather than look: codes digit by digit ("six one six").
   function spoken(text) {
@@ -58,10 +141,9 @@
     return text.match(/[^.!?…]+(?:[.!?…]+["’”)]*|$)\s*/g) || [text];
   }
 
-  /* Say a line. Resolves when she has finished, been hushed, or (in case the
-     browser never says it finished) after about as long as it should take. */
-  function say(text) {
-    if (!canSpeak || !voiceOn() || listening) return Promise.resolve();
+  // The browser's own voice, for lines that aren't recorded.
+  function read(text) {
+    if (!canSynth) return Promise.resolve();
     voice = voice || pickVoice();
     if (synth.paused) synth.resume();
     var parts = sentences(spoken(text));
@@ -87,16 +169,25 @@
 
   function hush() {
     if (talking) talking.finish();
-    if (canSpeak) synth.cancel();
+    if (player) player.pause();
+    if (canSynth) synth.cancel();
   }
 
-  // iPhones only let a page speak once it has spoken during a tap: say nothing, quietly, on the first one.
+  /* iPhones only let a page make sound by itself once it has during a tap:
+     on the first one, play a moment of silence and say nothing, quietly. */
   function unlock() {
-    if (unlocked || !canSpeak) return;
+    if (unlocked) return;
     unlocked = true;
-    var u = new SpeechSynthesisUtterance(' ');
-    u.volume = 0;
-    synth.speak(u);
+    if (player && !talking) {
+      player.src = 'voice/silence.mp3';
+      var p = player.play();
+      if (p && p.catch) p.catch(function () { /* it'll try again when she speaks */ });
+    }
+    if (canSynth) {
+      var u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      synth.speak(u);
+    }
   }
   ['click', 'touchend', 'keydown'].forEach(function (type) { document.addEventListener(type, unlock, true); });
 
@@ -392,7 +483,7 @@
   }
 
   window.Voice = {
-    canSpeak: canSpeak, voiceOn: voiceOn, setVoiceOn: setVoiceOn, say: say, hush: hush,
+    canSpeak: canSpeak, voiceOn: voiceOn, setVoiceOn: setVoiceOn, say: say, hush: hush, prepare: prepare,
     canListen: builtIn || canRecord, listen: listen, stop: stop, cancel: cancel,
     isListening: function () { return !!listening; },
     micPermission: micPermission, requestMic: requestMic

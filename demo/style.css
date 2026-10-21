@@ -353,6 +353,28 @@ img { display: block; max-width: 100%; }
   animation-delay: calc(var(--i) * 40ms + 120ms);
 }
 
+/* The lid coming off at the start: on the box, then lifting, turning over and
+   landing where the lid lies (game.js animates it). The shadows are on the
+   faces: a filter here would flatten the turn. */
+.lid-cover {
+  position: absolute;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transform-style: preserve-3d;
+}
+.lid-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 22px 34px -12px rgba(0,0,0,0.65);
+}
+.lid-cover__top { outline: 3px solid #ECE9E2; border-radius: 2px; }
+.lid-cover__under { transform: rotateY(180deg); }
+
 @keyframes settle {
   from { opacity: 0; transform: translate(-50%, -60%) rotate(calc(var(--r, 0deg) * 2)); }
   to   { opacity: 1; transform: translate(-50%, -50%) rotate(var(--r, 0deg)); }

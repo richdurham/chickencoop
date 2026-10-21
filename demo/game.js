@@ -591,6 +591,18 @@
     return null;
   }
 
+  /* Asked in the first moments, while the sentence model is still loading:
+     wait a little for it (her typing dots show) rather than answer by words. */
+  function meaningSoon(ms) {
+    if (meaning || !window.Meaning || !window.Meaning.loading) return Promise.resolve(meaning);
+    return new Promise(function (resolve) {
+      var done = function () { clearTimeout(giveUp); resolve(meaning); };
+      var giveUp = setTimeout(done, ms);
+      window.addEventListener('chickencoop:meaning-ready', done, { once: true });
+      window.addEventListener('chickencoop:meaning-failed', done, { once: true });
+    });
+  }
+
   /* Everything else: by meaning once the model is ready, by words until then.
      Resolves to what Alexa says. */
   function understand(raw) {
@@ -599,9 +611,9 @@
     if (/[a-z0-9]/i.test(rest)) raw = rest;
     var context = lastSeen && Date.now() - lastSeen.at < SEEN_FOR ? lastSeen.id : null;
     var byWords = function () { return Understand.byKeywords(raw); };
-    var work = meaning
-      ? meaning.embed(raw).then(function (v) { return Understand.byMeaning(v, meaning.index, raw, { contextItem: context }); })
-      : Promise.resolve(byWords());
+    var work = meaningSoon(8000).then(function (m) {
+      return m ? m.embed(raw).then(function (v) { return Understand.byMeaning(v, m.index, raw, { contextItem: context }); }) : byWords();
+    });
     return work.catch(byWords).then(function (result) {
       var turn = state.fallback;
       if (result.kind === 'fallback') { state.fallback += 1; save(); }
@@ -882,11 +894,13 @@
   // ---------- Starting, resuming, resetting ----------
 
   function enterBox(animate) {
-    startMeaning();
     $('intro').hidden = true;
     $('ending').hidden = true;
     $('game').hidden = false;
-    showView('alexa'); // on phones Alexa's tab comes first: she opens the conversation
+    // The first time, the lid comes off before Alexa says anything. On phones
+    // her tab comes first (she opens the conversation), after the box is open.
+    var welcome = !state.started, opening = welcome && animate && !reduceMotion;
+    showView(opening ? 'box' : 'alexa');
     renderBox();
     fitDesk();
 
@@ -894,23 +908,87 @@
     log.textContent = '';
     state.log.forEach(function (m) { appendMsg(m.who, m.text, m.extra); });
 
-    if (animate && !reduceMotion) {
+    // Coming back to a box already open, things settle into place; under a lid they're simply there.
+    if (animate && !reduceMotion && !opening) {
       $('game').classList.add('is-arriving');
       setTimeout(function () { $('game').classList.remove('is-arriving'); }, 2200);
     }
 
-    if (!state.started) {
+    if (welcome) {
       state.started = true;
       save();
-      WELCOME.forEach(function (line) { her(line); });
     }
-    if (!narrow()) $('ask-input').focus({ preventScroll: true });
+    var gen = generation;
+    // Her sentence model starts loading once the lid has landed: setting it up keeps
+    // the page busy, which would make the lid stutter. Her welcome covers the wait.
+    if (!opening) startMeaning();
+    (opening ? openLid() : Promise.resolve()).then(function () {
+      if (opening) startMeaning();
+      if (gen !== generation) return;
+      if (opening) showView('alexa');
+      if (welcome) WELCOME.forEach(function (line) { her(line); });
+      if (!narrow()) $('ask-input').focus({ preventScroll: true });
+    });
+  }
+
+  /* The lid comes off: it lifts from the box, turns over and lands beside it,
+     where it lies from then on, with the line written inside showing. The
+     moving lid is a stand-in; the real one appears where it lands. */
+  function openLid() {
+    var desk = $('desk'), lid = thingEl(LID.id);
+    if (!lid || !desk.animate) return Promise.resolve();
+    var cover = document.createElement('div');
+    cover.className = 'lid-cover';
+    cover.setAttribute('aria-hidden', 'true');
+    var top = new Image(), under = new Image(), shown = lid.querySelector('img');
+    top.className = 'lid-cover__top';
+    under.className = 'lid-cover__under';
+    top.src = 'box/lid-top.jpg';
+    under.src = pileSrc(itemById(LID.id));
+    top.alt = under.alt = '';
+    cover.appendChild(top);
+    cover.appendChild(under);
+    // On the box from the start, so nothing inside shows before it lifts.
+    var d = desk.getBoundingClientRect(), c = $('carton').getBoundingClientRect();
+    var pct = function (px, of) { return px / of * 100; };
+    var from = { x: pct(c.left + c.width / 2 - d.left, d.width), y: pct(c.top + c.height / 2 - d.top, d.height), w: pct(c.width + 6, d.width), h: pct(c.height + 6, d.height) };
+    var put = function (f) { cover.style.left = f.x + '%'; cover.style.top = f.y + '%'; cover.style.width = f.w + '%'; cover.style.height = f.h + '%'; };
+    put(from);
+    desk.appendChild(cover);
+    lid.style.visibility = 'hidden';
+
+    var loaded = function (img) {
+      var ok = img.decode ? img.decode().catch(function () {}) : Promise.resolve();
+      return Promise.race([ok, new Promise(function (r) { setTimeout(r, 1500); })]); // a slow connection doesn't hold up the game
+    };
+    return Promise.all([loaded(top), loaded(under), loaded(shown)]).then(function () {
+      // Where the real lid lies, as place() puts it.
+      var p = placeOf(LID.id), b = DESKS[deskShape].box;
+      var aspect = shown.naturalWidth ? shown.naturalHeight / shown.naturalWidth : 0.6;
+      var w = p[2] * b[2] / 100;
+      var to = { x: b[0] + clampX(p[0]) * b[2] / 100, y: b[1] + clampY(p[1]) * b[3] / 100, w: w, h: pct(w / 100 * d.width * aspect, d.height) };
+      var mid = { x: (from.x + to.x) / 2, y: Math.min(from.y, to.y) - 8, w: (from.w + to.w) / 2, h: (from.h + to.h) / 2 };
+      var at = function (f, extra) { return { left: f.x + '%', top: f.y + '%', width: f.w + '%', height: f.h + '%', transform: extra }; };
+      var turn = function (spin, over, scale) { return 'translate(-50%, -50%) perspective(1400px) rotate(' + spin + 'deg) rotateY(' + over + 'deg) scale(' + scale + ')'; };
+      var lifted = { x: from.x, y: from.y - 2, w: from.w, h: from.h };
+      var frames = [
+        at(from, turn(0, 0, 1)),
+        Object.assign(at(lifted, turn(0, 0, 1.04)), { offset: 0.2 }),
+        Object.assign(at(mid, turn(p[3] / 2, 110, 1.12)), { offset: 0.6 }),
+        at(to, turn(p[3], 180, 1))
+      ];
+      return cover.animate(frames, { duration: 1700, easing: 'cubic-bezier(.45,.05,.3,1)', fill: 'forwards' }).finished;
+    }).catch(function () { /* if it can't animate, the lid is simply off */ }).then(function () {
+      cover.remove();
+      lid.style.visibility = '';
+    });
   }
 
   function narrow() { return window.matchMedia('(max-width: 860px)').matches; }
 
   function openCoop() {
     var intro = $('intro');
+    Voice.prepare(WELCOME); // her first lines download while the lid comes off
     intro.classList.add('is-opening');
     $('intro-reply').textContent = '';
     setTimeout(function () {
