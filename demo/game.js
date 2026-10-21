@@ -9,7 +9,7 @@
   var state = fresh();
 
   function fresh() {
-    return { started: false, opened: [], log: [], ending: null, fallback: 0, layout: {}, handled: false };
+    return { started: false, opened: [], log: [], ending: null, fallback: 0, layout: {}, handled: false, out: [] };
   }
 
   // ---------- Saving (best effort: private windows may block storage) ----------
@@ -86,7 +86,22 @@
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-  function pileIds() { return [LID.id].concat(PILE.map(function (p) { return p[0]; })); }
+  // The lid, the starting pile, then whatever has been taken out of the kete or envelope.
+  function pileIds() {
+    return [LID.id].concat(PILE.map(function (p) { return p[0]; }), state.out.filter(itemById));
+  }
+
+  function topZ() {
+    var top = 0;
+    pileIds().forEach(function (id) { top = Math.max(top, placeOf(id)[4]); });
+    return top;
+  }
+
+  // What's still inside the kete or envelope, in the order it comes out.
+  function stillInside(item) {
+    if (!item.reach) return [];
+    return ITEMS.filter(function (it) { return it.in === item.id && state.out.indexOf(it.id) === -1; });
+  }
 
   /* Where a thing lies: [x, y, width, angle, z], in the box terms PILE uses.
      Where the player left it wins over the starting arrangement. */
@@ -135,35 +150,35 @@
     if (shape !== deskShape) { deskShape = shape; placeAll(); }
   }
 
+  function addThing(id, i) {
+    var item = itemById(id);
+    var el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'thing' + (LOOK[id] ? ' thing--' + LOOK[id] : '');
+    el.dataset.item = id;
+    el.style.setProperty('--i', i);
+    el.setAttribute('aria-label', item.label);
+    el.setAttribute('aria-describedby', 'thing-help');
+    var img = document.createElement('img');
+    img.src = pileSrc(item);
+    img.alt = '';
+    img.draggable = false;
+    img.decoding = 'async';
+    el.appendChild(img);
+    place(el, placeOf(id));
+    bindThing(el, id);
+    $('desk').appendChild(el);
+  }
+
   function renderBox() {
-    var desk = $('desk');
-    Array.prototype.forEach.call(desk.querySelectorAll('.thing'), function (el) { el.remove(); });
-    pileIds().forEach(function (id, i) {
-      var item = itemById(id);
-      var el = document.createElement('button');
-      el.type = 'button';
-      el.className = 'thing' + (LOOK[id] ? ' thing--' + LOOK[id] : '');
-      el.dataset.item = id;
-      el.style.setProperty('--i', i);
-      el.setAttribute('aria-label', item.label);
-      el.setAttribute('aria-describedby', 'thing-help');
-      var img = document.createElement('img');
-      img.src = pileSrc(item);
-      img.alt = '';
-      img.draggable = false;
-      img.decoding = 'async';
-      el.appendChild(img);
-      place(el, placeOf(id));
-      bindThing(el, id);
-      desk.appendChild(el);
-    });
+    Array.prototype.forEach.call($('desk').querySelectorAll('.thing'), function (el) { el.remove(); });
+    pileIds().forEach(addThing);
     $('desk-hint').hidden = !!state.handled;
     renderProgress();
   }
 
   function bringToFront(id) {
-    var top = 0;
-    pileIds().forEach(function (other) { top = Math.max(top, placeOf(other)[4]); });
+    var top = topZ();
     var p = placeOf(id);
     if (p[4] !== top || !state.layout[id]) p[4] = top + 1;
     state.layout[id] = p;
@@ -251,9 +266,10 @@
   var returnFocus = null;
   var swipe = null;
 
-  /* Two sides turn over; more pages, or a folder's contents, are leafed through. */
+  /* Two sides turn over; more pages, or the folder's contents, are leafed through.
+     The kete and the envelope are held as they are, and reached into. */
   function handFor(item) {
-    var inside = ITEMS.filter(function (it) { return it.in === item.id; });
+    var inside = item.reach ? [] : ITEMS.filter(function (it) { return it.in === item.id; });
     var pages = [];
     if (inside.length) {
       inside.forEach(function (doc) {
@@ -286,18 +302,22 @@
     return div;
   }
 
-  function openReader(id) {
+  function openReader(id, takenOut) {
     var item = itemById(id);
     if (!item) return;
     var h = handFor(item);
     holding = { item: item, kind: h.kind, pages: h.pages, at: 0, turned: false };
-    returnFocus = document.activeElement;
+    if (!takenOut) returnFocus = document.activeElement;
 
     $('reader-title').textContent = item.label;
     renderCredit(item.credit);
     var hand = $('hand');
     hand.className = 'hand hand--' + h.kind;
     hand.textContent = '';
+    if (takenOut && !reduceMotion) {
+      hand.classList.add('is-emerging');
+      hand.addEventListener('animationend', function () { hand.classList.remove('is-emerging'); }, { once: true });
+    }
     if (h.kind === 'flip') {
       h.pages.forEach(function (pg, i) {
         var face = document.createElement('div');
@@ -311,13 +331,15 @@
     $('reader-prev').hidden = $('reader-next').hidden = h.kind !== 'leaf';
     $('reader-turn').hidden = h.kind !== 'flip';
     $('reader-turn').textContent = 'Turn it over';
+    $('reader-reach').textContent = item.reach || '';
+    $('reader-reach').hidden = !stillInside(item).length;
     zoom(false);
 
     $('reader').hidden = false;
     document.body.style.overflow = 'hidden';
     markSeen(id);
     showAt();
-    var first = h.kind === 'leaf' ? $('reader-next') : h.kind === 'flip' ? $('reader-turn') : $('reader').querySelector('.reader__x');
+    var first = !$('reader-reach').hidden ? $('reader-reach') : h.kind === 'leaf' ? $('reader-next') : h.kind === 'flip' ? $('reader-turn') : $('reader').querySelector('.reader__x');
     first.focus();
   }
 
@@ -325,10 +347,9 @@
 
   function showAt() {
     var pg = current();
-    $('reader-page').textContent = pg.label;
+    $('reader-page').textContent = holding.item.reach && !stillInside(holding.item).length ? 'Nothing else inside' : pg.label;
     $('reader-prev').disabled = holding.at === 0;
     $('reader-next').disabled = holding.at === holding.pages.length - 1;
-    $('reader-full').href = pageSrc(pg.item, pg.p);
     lastSeen = { id: pg.item.id, at: Date.now() };
     markSeen(pg.item.id);
     var next = holding.kind === 'leaf' && holding.pages[holding.at + 1];
@@ -389,6 +410,37 @@
     showAt();
   }
 
+  /* Take the next thing out of the kete or envelope. It goes into your hand,
+     and is put down on the table beside where it came from. */
+  function reachIn() {
+    if (!holding) return;
+    var from = holding.item, next = stillInside(from)[0];
+    if (!next) return;
+    var lands = TAKE_OUT[next.id] || [20, 0], at = beside(placeOf(from.id), lands[0]);
+    state.layout[next.id] = [at[0], at[1], lands[0], lands[1], topZ() + 1];
+    state.out.push(next.id);
+    save();
+    addThing(next.id, pileIds().length - 1);
+    openReader(next.id, true);
+  }
+
+  /* A spot in the box next to p for something w wide: of eight around it, the
+     one with the most room, so it covers as little as it can. */
+  function beside(p, w) {
+    var apart = (p[2] + w) * 0.45, best = null;
+    for (var a = 0; a < 8; a++) {
+      var x = clamp(p[0] + Math.cos(a * Math.PI / 4) * apart, w / 2 + 2, 98 - w / 2);
+      var y = clamp(p[1] + Math.sin(a * Math.PI / 4) * apart, 10, 90);
+      var room = Infinity;
+      pileIds().forEach(function (id) {
+        var q = placeOf(id);
+        room = Math.min(room, Math.hypot(q[0] - x, q[1] - y) - q[2] / 2);
+      });
+      if (!best || room > best[2]) best = [x, y, room];
+    }
+    return best;
+  }
+
   /* Photos that aren't from Katie's box carry their licence credit. */
   function renderCredit(credit) {
     var el = $('reader-credit');
@@ -415,10 +467,11 @@
 
   function toggleZoom() { zoom(!$('reader-view').classList.contains('is-zoomed')); }
 
-  // Tapping the thing does the natural thing: turn it over, turn the page, or look closer.
+  // Tapping the thing does the natural thing: reach in, turn it over, turn the page, or look closer.
   function tapHand(e) {
     if (!holding) return;
-    if (holding.kind === 'flip') flip();
+    if (stillInside(holding.item).length) reachIn();
+    else if (holding.kind === 'flip') flip();
     else if (holding.kind === 'leaf') {
       var r = $('hand').getBoundingClientRect();
       leaf(e.clientX - r.left < r.width * 0.35 ? -1 : 1);
@@ -737,6 +790,7 @@
     $('reader-next').addEventListener('click', function () { leaf(1); });
     $('reader-turn').addEventListener('click', flip);
     $('reader-zoom').addEventListener('click', toggleZoom);
+    $('reader-reach').addEventListener('click', reachIn);
 
     // Tap the thing in hand, or swipe across it to turn the page.
     var hand = $('hand');

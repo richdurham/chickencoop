@@ -13,8 +13,10 @@ const INTRO_PHRASES = [
 /* Each item's images are box/<id>-<n>.jpg, with a smaller copy at
    box/thumb/<id>.jpg (w x h) for the pile. Items with `cut` were photographed
    on a table and use background-free versions, box/cut/<id>.webp and
-   box/cut/thumb/<id>.webp. `in` puts an item inside another (the folder's
-   documents), so it is found by leafing through that, not on the pile.
+   box/cut/thumb/<id>.webp. `in` puts an item inside another, so it isn't on
+   the pile at the start: the folder's documents are found by leafing through
+   it, and what's in an item with `reach` (the kete, the envelope; the button
+   says how) is taken out one thing at a time and put down beside it.
    `sides` names the pages of things that turn over or open (2 sides flip,
    more leaf); `credit` ({ text, href }) attributes a stand-in photo that
    didn't come from the real box.
@@ -34,10 +36,13 @@ const ITEMS = [
   { id: 'wrinkled-note', cut: true, label: 'Crumpled printout', caption: 'A printed email to Alexa, crumpled up, with a line written across it.', pages: 1, w: 433, h: 560,
     name: 'the crumpled printout', links: ['katie', 'postit'],
     about: ['A crumpled printed email from Katie to Alexa about a delivery.', 'Handwriting across it says: ask Alexa to open the chicken coop.'] },
-  { id: 'kete', cut: true, label: 'Kete', caption: 'A small woven flax kete, with two tags on a chain and three clear capsules.', pages: 1, w: 420, h: 560,
+  { id: 'kete', cut: true, label: 'Kete', caption: 'A small woven flax kete.', pages: 1, w: 600, h: 594, reach: 'Reach inside',
     name: 'the kete', links: [],
-    about: ['A small woven flax kete, a Maori bag with handles.', 'Inside are two blank metal dog tags on a ball chain and three small clear plastic capsules.'] },
-  { id: 'kete-note', cut: true, label: 'Paper from the kete', caption: 'Folded inside the kete, dated in green ink.', pages: 1, w: 420, h: 560,
+    about: ['A small woven flax kete, a Maori bag with handles.'] },
+  { id: 'dog-tags', cut: true, in: 'kete', label: 'Dog tags', caption: 'Two metal tags and three clear capsules on ball chains.', pages: 1, w: 600, h: 451,
+    name: 'the dog tags', links: [],
+    about: ['Two metal dog tags on a ball chain, stamped Name, Age, Sex, Blood and Birth and otherwise left blank.', 'Three small clear round capsules on ball chains.'] },
+  { id: 'kete-note', cut: true, in: 'kete', label: 'Paper from the kete', caption: 'Folded inside the kete, dated in green ink.', pages: 1, w: 420, h: 560,
     name: 'the paper from the kete', links: [],
     about: ['A folded sheet of white paper with September 2018 written on it in green ink.'] },
   { id: 'boarding-pass', label: 'Boarding pass', caption: 'A boarding pass.', pages: 1, w: 560, h: 231,
@@ -69,9 +74,12 @@ const ITEMS = [
   { id: 'who-trip', label: 'Group photo on the steps', caption: 'A group on some steps. There’s writing on the back.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 397,
     name: 'the photo on the steps', links: ['c5'],
     about: ['A group photo of people standing on the steps outside a building with World Health Organization logos.', 'Written on the back: C5, WHO trip, September 2017.'] },
-  { id: 'card', label: 'Get-well card', caption: 'A card in an envelope addressed to Katie, signed by her colleagues.', pages: 4, sides: ['Envelope', 'Front', 'Inside', 'Back'], w: 560, h: 485,
+  { id: 'envelope', label: 'Envelope', caption: 'A white envelope with Katie written on the front.', pages: 1, w: 560, h: 485, reach: 'Open it',
+    name: 'the envelope', links: [],
+    about: ['A white envelope with Katie handwritten on the front.'] },
+  { id: 'card', in: 'envelope', label: 'Get-well card', caption: 'A get-well card signed by her colleagues.', pages: 3, sides: ['Front', 'Inside', 'Back'], w: 397, h: 560,
     name: 'the get-well card', links: ['tim'],
-    about: ['A floral get well soon card in an envelope addressed to Katie.', 'Inside it is signed by her colleagues, including Tim, Barbara, Josh and Tony.', 'A greeting card with handwritten messages from her workmates.'] },
+    about: ['A floral get well soon card.', 'Inside it is signed by her colleagues, including Tim, Barbara, Josh and Tony.', 'A greeting card with handwritten messages from her workmates.'] },
 
   { id: 'folder-cover', label: 'The folder', caption: 'A black ring binder with a handwritten spine.', pages: 1, w: 433, h: 560,
     name: 'the folder', links: [],
@@ -104,13 +112,12 @@ const ITEMS = [
    everything; their arrangement is saved, this is only the start. */
 const PILE = [
   ['certificate', 34, 68, 47, -8],
-  ['card', 75, 73, 34, 12],
+  ['envelope', 75, 73, 34, 12],
   ['folder-cover', 50, 45, 47, 24],
   ['who-trip', 78, 20, 33, -4],
   ['family-photo', 22, 20, 20, 6],
   ['summer-school', 45, 12, 33, -9],
-  ['kete-note', 81, 45, 13, -14],
-  ['kete', 86, 49, 25, 8],
+  ['kete', 86, 49, 28, 8],
   ['boarding-pass', 25, 87, 34, 4],
   ['plant', 14, 55, 15, -20],
   ['glasses', 61, 86, 24, -12],
@@ -120,6 +127,10 @@ const PILE = [
   ['lid-note', 59, 30, 16, 9]
 ];
 const LID = { id: 'lid-inside', wide: [123, 50, 53, -88], tall: [50, 125, 60, -3] };
+
+/* Things inside the kete and the envelope land beside them when taken out:
+   [width, angle], as in PILE. */
+const TAKE_OUT = { 'dog-tags': [24, -10], 'kete-note': [13, -14], card: [22, 6] };
 
 /* Alexa Blueprint: welcome and exit. */
 const WELCOME = [

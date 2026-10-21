@@ -446,6 +446,7 @@ img { display: block; max-width: 100%; }
 .hand {
   position: relative;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   touch-action: pan-y pinch-zoom;
   transform-style: preserve-3d;
 }
@@ -492,6 +493,13 @@ img { display: block; max-width: 100%; }
   to   { transform: none; opacity: 1; }
 }
 
+/* Just taken out of the kete or envelope: it comes up into your hand. */
+.hand.is-emerging { animation: emerge 560ms cubic-bezier(.2,.8,.25,1) both; }
+@keyframes emerge {
+  from { transform: translateY(22%) scale(0.8); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
 .reader__page {
   min-height: 1.4em;
   margin: 0.75rem 0 0;
@@ -521,14 +529,6 @@ img { display: block; max-width: 100%; }
   align-items: center;
   gap: 1.25rem;
 }
-
-.reader__full {
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-  color: var(--chalk-dim);
-  text-underline-offset: 0.25em;
-}
-.reader__full:hover { color: var(--chalk); }
 
 /* ---------- Alexa ---------- */
 
