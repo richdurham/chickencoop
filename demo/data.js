@@ -7,7 +7,8 @@ const INTRO_PHRASES = [
   'alexa open the chicken coop',
   'open the chicken coop',
   'alexa open chicken coop',
-  'open chicken coop'
+  'open chicken coop',
+  'open a chicken coop' // how speech recognition sometimes hears "open the chicken coop"
 ];
 
 /* Each item's images are box/<id>-<n>.jpg, with a smaller copy at
