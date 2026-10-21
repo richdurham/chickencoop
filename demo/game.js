@@ -533,7 +533,8 @@
     remember('you', text, extra);
   }
 
-  /* text can be a promise: the typing dots show while Alexa works out her answer. */
+  /* text can be a promise: the typing dots show while Alexa works out her answer.
+     With her voice on she says it aloud, and her next line waits until she's done. */
   function her(text, then) {
     var gen = generation;
     queue = queue.then(function () {
@@ -551,16 +552,16 @@
       // A failure working out the answer must not silence Alexa for the rest of the game.
       return Promise.resolve(text).catch(function () { return FALLBACKS[0]; }).then(function (t) {
         return new Promise(function (done) {
-          var wait = (reduceMotion ? 250 : Math.min(1700, 420 + t.length * 7)) - (Date.now() - shown);
+          var aloud = Voice.canSpeak && Voice.voiceOn();
+          var wait = (reduceMotion ? 250 : aloud ? Math.min(900, 300 + t.length * 3) : Math.min(1700, 420 + t.length * 7)) - (Date.now() - shown);
           setTimeout(function () {
             typing.remove();
-            face.classList.remove('is-speaking');
-            if (gen !== generation) { done(); return; }
+            if (gen !== generation) { face.classList.remove('is-speaking'); done(); return; }
             appendMsg('her', t);
             remember('her', t);
             flagAlexaTab();
             if (then) then();
-            done();
+            Voice.say(t).then(function () { face.classList.remove('is-speaking'); done(); });
           }, Math.max(0, wait));
         });
       });
@@ -585,6 +586,9 @@
   /* Everything else: by meaning once the model is ready, by words until then.
      Resolves to what Alexa says. */
   function understand(raw) {
+    // People talking to an Alexa start with her name ("Alexa, who is Ken?"); the question is the rest.
+    var rest = String(raw).replace(/^\s*(hey|ok|okay)?[\s,]*alexa\b[\s,.:;!?-]*/i, '');
+    if (/[a-z0-9]/i.test(rest)) raw = rest;
     var context = lastSeen && Date.now() - lastSeen.at < SEEN_FOR ? lastSeen.id : null;
     var byWords = function () { return Understand.byKeywords(raw); };
     var work = meaning
@@ -615,9 +619,61 @@
   }
 
   function lockAsk(locked) {
+    if (locked) Voice.cancel();
     $('ask-input').disabled = locked;
-    $('ask').querySelector('button').disabled = locked;
+    $('ask-mic').disabled = locked;
+    $('ask').querySelector('button[type="submit"]').disabled = locked;
     $('codes').hidden = locked;
+  }
+
+  // ---------- Talking out loud (voice.js does the listening and speaking) ----------
+
+  // Short enough to fit in the text box, where they show.
+  var NOT_HEARD = {
+    nothing: 'Didn’t catch that. Try again?',
+    again: 'Tap the microphone again to talk',
+    blocked: 'Microphone blocked: allow it in settings',
+    unavailable: 'Can’t listen in this browser. Type instead'
+  };
+
+  /* A microphone beside a text box: tap to talk; it stops when you pause, or
+     tap again. What it heard goes in the box and is sent as if typed. */
+  function bindMic(btn, input, send) {
+    if (!Voice.canListen) { btn.hidden = true; return; }
+    var placeholder = input.placeholder, fade = null;
+    var show = function (status, text) {
+      clearTimeout(fade);
+      btn.classList.toggle('is-listening', status === 'listening');
+      btn.classList.toggle('is-busy', status === 'busy');
+      btn.setAttribute('aria-pressed', String(status !== 'idle'));
+      btn.setAttribute('aria-label', status === 'listening' ? 'Stop listening' : 'Talk to Alexa');
+      input.placeholder = text || placeholder;
+      $('voice-status').textContent = text || '';
+    };
+    var ui = {
+      onListening: function () { show('listening', 'Listening…'); },
+      onHeard: function (text) { input.value = text; },
+      onWaiting: function (f) { input.value = ''; show('busy', 'Getting ready to listen…' + (f > 0 ? ' ' + Math.round(f * 100) + '%' : '')); },
+      onWorking: function () { input.value = ''; show('busy', 'Working out what you said…'); },
+      onDone: function (text) { input.value = ''; show('idle'); send(text); },
+      onFail: function (why) {
+        input.value = '';
+        show('idle', NOT_HEARD[why]);
+        fade = setTimeout(function () { show('idle'); }, 6000);
+      }
+    };
+    btn.addEventListener('click', function () {
+      if (Voice.isListening()) Voice.stop();
+      else if (!btn.classList.contains('is-busy')) { show('listening', 'Starting…'); Voice.listen(ui); }
+    });
+  }
+
+  function renderVoiceToggle() {
+    var btn = $('voice-toggle'), on = Voice.voiceOn();
+    btn.hidden = !Voice.canSpeak;
+    btn.classList.toggle('is-off', !on);
+    btn.setAttribute('aria-pressed', String(on));
+    btn.title = on ? 'Alexa’s voice is on' : 'Alexa’s voice is off';
   }
 
   // ---------- Mobile tabs ----------
@@ -722,13 +778,19 @@
   function onIntro(e) {
     e.preventDefault();
     var input = $('intro-input');
-    var n = norm(input.value.trim() || input.placeholder);
-    var ok = INTRO_PHRASES.some(function (p) { return has(n, p); });
-    if (ok) {
+    tryOpen(input.value.trim() || input.placeholder, true);
+  }
+
+  // Typed or said: only the line itself opens the box.
+  function tryOpen(said, typed) {
+    var n = norm(said);
+    if (INTRO_PHRASES.some(function (p) { return has(n, p); })) {
       openCoop();
     } else {
+      $('intro-input').value = said;
       $('intro-reply').textContent = START_HINT;
-      input.select();
+      Voice.say(START_HINT);
+      if (typed) $('intro-input').select(); // not after talking: on a phone that would pop up the keyboard
     }
   }
 
@@ -738,6 +800,8 @@
   }
 
   function restart() {
+    Voice.cancel();
+    Voice.hush();
     wipe();
     state = fresh();
     lastSeen = null;
@@ -771,6 +835,14 @@
       var input = $('ask-input');
       ask(input.value);
       input.value = '';
+    });
+
+    bindMic($('intro-mic'), $('intro-input'), tryOpen);
+    bindMic($('ask-mic'), $('ask-input'), ask);
+    renderVoiceToggle();
+    $('voice-toggle').addEventListener('click', function () {
+      Voice.setVoiceOn(!Voice.voiceOn());
+      renderVoiceToggle();
     });
 
     // The code buttons only fill in the line; saying it is still up to the player.

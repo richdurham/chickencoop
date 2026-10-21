@@ -143,6 +143,10 @@ const EXIT = 'Goodbye for now. If you want to contact me again, ask me to open t
 
 const START_HINT = 'That’s a command for me to start the game. Tell me as written, Alexa, open the chicken coop.';
 
+/* Names and words from the game that speech recognition would otherwise
+   mishear. Whisper (listen-worker.js) is primed with them. */
+const VOICE_WORDS = 'Alexa, Katie, Ken, Tim, Igor Kuznetsov, Titirangi, Dubrovnik, C Five, kete, falcon, cleansing.';
+
 /* Alexa Blueprint: QA. Each entry is one scripted answer (`a`, word for word).
    `examples` are natural questions that mean it; the model compares a
    player's question with these by meaning. `keys` are phrases for the simple
