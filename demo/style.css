@@ -696,6 +696,64 @@ img { display: block; max-width: 100%; }
 .ask__input::placeholder { color: rgba(198,219,221,0.4); }
 .ask__input:focus { outline: none; border-color: var(--signal); }
 
+/* Talking out loud: a microphone beside each text box. It glows while listening. */
+.mic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--device-edge);
+  color: var(--voice);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.mic:hover { background: #3A606B; }
+.mic:disabled { opacity: 0.4; cursor: default; }
+.mic.is-listening {
+  background: var(--signal);
+  color: var(--device);
+  animation: listening 1100ms ease-out infinite;
+}
+.mic.is-busy { opacity: 0.6; cursor: progress; }
+@keyframes listening {
+  from { box-shadow: 0 0 0 0 rgba(124,198,185,0.6); }
+  to   { box-shadow: 0 0 0 10px rgba(124,198,185,0); }
+}
+
+/* On the closed box, it sits with the paper "Say it" button. */
+.mic--paper {
+  width: 3rem;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.25);
+  color: var(--chalk);
+}
+.mic--paper:hover { background: rgba(0,0,0,0.4); }
+.mic--paper.is-listening { background: var(--manila); color: var(--ink); }
+
+/* Alexa's voice: on or off. */
+.alexa__voice {
+  margin-left: auto;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--voice-dim);
+  cursor: pointer;
+}
+.alexa__voice:hover { color: var(--voice); background: rgba(134,163,168,0.12); }
+.alexa__voice .icon-off,
+.alexa__voice.is-off .icon-on { display: none; }
+.alexa__voice.is-off .icon-off { display: block; }
+
 /* ---------- Ending ---------- */
 
 .ending {
@@ -851,6 +909,10 @@ img { display: block; max-width: 100%; }
   .rail__title { display: none; }
   .rail__progress { margin-left: 0; }
   .rail__reset { margin-left: auto; }
+  /* Room for the whole line, the microphone and "Say it" on one row. */
+  .say__row { gap: 0.375rem; }
+  .say__input { font-size: 1.0625rem; padding-inline: 0.6rem; }
+  .mic--paper { width: 2.5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

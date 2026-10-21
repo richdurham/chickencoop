@@ -16,7 +16,8 @@
 
   var NUMBER_WORDS = [
     [/\bsix one six\b/g, '616'], [/\bsix sixteen\b/g, '616'], [/\bsix hundred (and )?sixteen\b/g, '616'],
-    [/\btwo six four\b/g, '264'], [/\btwo sixty four\b/g, '264'], [/\btwo hundred (and )?sixty four\b/g, '264']
+    [/\btwo six four\b/g, '264'], [/\btwo sixty four\b/g, '264'], [/\btwo hundred (and )?sixty four\b/g, '264'],
+    [/\b6 1 6\b/g, '616'], [/\b6 16\b/g, '616'], [/\b2 6 4\b/g, '264'], [/\b2 64\b/g, '264'] // as speech recognition writes them
   ];
 
   function norm(s) {

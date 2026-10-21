@@ -27,6 +27,9 @@
         <label for="intro-input" class="say__label">Say it to Alexa</label>
         <div class="say__row">
           <input id="intro-input" class="say__input" type="text" placeholder="Alexa, open the chicken coop" spellcheck="false">
+          <button id="intro-mic" type="button" class="mic mic--paper" aria-label="Talk to Alexa" aria-pressed="false">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 14.5a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5.5a3 3 0 0 0 3 3Z" fill="currentColor"/><path d="M18 11.5a6 6 0 0 1-12 0M12 17.5V21M8.5 21h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
           <button type="submit" class="btn btn--paper">Say it</button>
         </div>
         <p id="intro-reply" class="say__reply" aria-live="polite"></p>
@@ -68,6 +71,10 @@
             <p class="alexa__name">Alexa Gardner</p>
             <p class="alexa__sub">Katie&rsquo;s childhood friend</p>
           </div>
+          <button id="voice-toggle" type="button" class="alexa__voice" aria-label="Alexa&rsquo;s voice" aria-pressed="true">
+            <svg class="icon-on" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4Z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg class="icon-off" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4Z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
         </header>
         <ol id="log" class="log" aria-live="polite" aria-relevant="additions"></ol>
         <div id="codes" class="codes">
@@ -80,6 +87,9 @@
         <form id="ask" class="ask" autocomplete="off">
           <label for="ask-input" class="sr-only">Ask Alexa something, or say a code</label>
           <input id="ask-input" class="ask__input" type="text" placeholder="Ask Alexa, or say a code" spellcheck="false">
+          <button id="ask-mic" type="button" class="mic" aria-label="Talk to Alexa" aria-pressed="false">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 14.5a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5.5a3 3 0 0 0 3 3Z" fill="currentColor"/><path d="M18 11.5a6 6 0 0 1-12 0M12 17.5V21M8.5 21h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
           <button type="submit" class="btn btn--device">Ask</button>
         </form>
       </aside>
@@ -129,8 +139,12 @@
     </div>
   </section>
 
+  <!-- Listening and speaking: what the microphone heard, for screen readers. -->
+  <p id="voice-status" class="sr-only" aria-live="polite"></p>
+
   <script src="data.js"></script>
   <script src="understand.js"></script>
+  <script src="voice.js"></script>
   <script src="game.js"></script>
   <script type="module" src="meaning.js"></script>
 </body>

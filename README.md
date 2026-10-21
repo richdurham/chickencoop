@@ -13,6 +13,8 @@ Open the Chicken Coop
 
 Alexa understands questions in plain language. A small sentence-embedding model (all-MiniLM-L6-v2, about 33 MB with its runtime, served from [`demo/model/`](demo/model/) and [`demo/lib/`](demo/lib/)) loads in the background once the box opens and compares each question with example questions for her scripted answers. When she's fairly but not fully sure, she hedges; if a question is about an item her script doesn't cover, she says so. Command codes are still matched word for word. Until the model is ready, or on devices that can't run it, she matches key words. To tune the example questions in `demo/data.js`, open the demo with `?debug` on the end of the address and watch the browser console.
 
+Players can also talk to Alexa out loud: tap the microphone beside her text box (or beside "Say it" on the closed box), and she answers aloud. Browsers that recognise speech themselves (Chrome, Edge, Safari) do the listening; those send the audio to Google or Apple to transcribe. Everywhere else (Brave, Firefox), the page records the player and a small speech recognition model, Whisper tiny (about 41 MB, served from [`demo/model/`](demo/model/)), turns it into text on the device. It is downloaded only the first time someone talks in one of those browsers, and is primed with the game's names (`VOICE_WORDS` in `demo/data.js`) so it spells them right. Alexa's voice is the browser's own speech synthesis, a New Zealand voice where the device has one; the speaker button beside her name turns it off.
+
 [PartyRock text AI chat version](https://partyrock.aws/u/richdurham/e1B7QinQ7/Alexa-Open-the-Chicken-Coop)
 
 [Weird Dopple.ai verson with vocal responses](https://beta.dopple.ai/profile/82513e14-ca2b-4238-9a5e-0905eb6d3597)
