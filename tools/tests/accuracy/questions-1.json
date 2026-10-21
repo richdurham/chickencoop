@@ -1,0 +1,470 @@
+[
+[
+"who is this katie person",
+"katie",
+null,
+"A"
+],
+[
+"what can you tell me about her",
+"katie",
+null,
+"A"
+],
+[
+"were you and Katie close?",
+"katie",
+null,
+"A"
+],
+[
+"what's C5 all about",
+"c5",
+null,
+"A"
+],
+[
+"what did Katie do for a living",
+"c5",
+null,
+"A"
+],
+[
+"is C5 a real lab?",
+"c5",
+null,
+"A"
+],
+[
+"who's Igor Kuznetsov",
+"igor",
+null,
+"A"
+],
+[
+"the Russian guy, who is he?",
+"igor",
+null,
+"A"
+],
+[
+"what do you know about igor",
+"igor",
+null,
+"A"
+],
+[
+"there's no Igor on LinkedIn",
+"linkedin",
+null,
+"A"
+],
+[
+"I googled Igor and got nothing",
+"linkedin",
+null,
+"A"
+],
+[
+"would this virus affect humans",
+"harmful",
+null,
+"A"
+],
+[
+"could it make people ill",
+"harmful",
+null,
+"A"
+],
+[
+"is the virus a danger to people",
+"harmful",
+null,
+"A"
+],
+[
+"tell me about the rat plague",
+"titirangi",
+null,
+"A"
+],
+[
+"why does the village have so many chickens",
+"titirangi",
+null,
+"A"
+],
+[
+"where exactly is Titirangi",
+"titirangi",
+null,
+"A"
+],
+[
+"what did Katie do in Dubrovnik",
+"dubrovnik",
+null,
+"A"
+],
+[
+"why did the conference upset her",
+"dubrovnik",
+null,
+"A"
+],
+[
+"is Katie married to someone?",
+"ken",
+null,
+"A"
+],
+[
+"where are her children",
+"ken",
+null,
+"A"
+],
+[
+"tell me about her family",
+"ken",
+null,
+"A"
+],
+[
+"is that note about you?",
+"postit",
+null,
+"A"
+],
+[
+"can the stuff in the box hurt me",
+"infected",
+null,
+"A"
+],
+[
+"should I wear gloves to touch this?",
+"infected",
+null,
+"A"
+],
+[
+"why does she have euros",
+"coins",
+null,
+"A"
+],
+[
+"what kind of money is this",
+"coins",
+null,
+"A"
+],
+[
+"who's Tim?",
+"tim",
+null,
+"A"
+],
+[
+"who sent all this stuff",
+"tim",
+null,
+"A"
+],
+[
+"who's her manager",
+"tim",
+null,
+"A"
+],
+[
+"what do you reckon I should do",
+"choose",
+null,
+"A"
+],
+[
+"release or destroy?",
+"choose",
+null,
+"A"
+],
+[
+"what's the right thing to do here",
+"choose",
+null,
+"A"
+],
+[
+"and you are?",
+"whoareyou",
+null,
+"A"
+],
+[
+"who exactly are you",
+"whoareyou",
+null,
+"A"
+],
+[
+"what's going on here",
+[
+"whatisthis",
+"coop"
+],
+null,
+"A"
+],
+[
+"what is this all about",
+"whatisthis",
+null,
+"A"
+],
+[
+"I have to go now",
+"exit",
+null,
+"A"
+],
+[
+"talk later",
+"exit",
+null,
+"A"
+],
+[
+"who are the people in the family photo",
+[
+"ken",
+"katie"
+],
+null,
+"B"
+],
+[
+"who's the guy on the business card",
+"igor",
+null,
+"B"
+],
+[
+"who wrote on the get well card",
+"tim",
+null,
+"B"
+],
+[
+"who signed the card",
+"tim",
+null,
+"B"
+],
+[
+"what's in the little woven bag",
+"unknown:kete",
+null,
+"B"
+],
+[
+"what are those little capsules",
+"unknown:kete",
+null,
+"B"
+],
+[
+"what are the dog tags for",
+"unknown:kete",
+null,
+"B"
+],
+[
+"why is there a mug in the box",
+"unknown:mug",
+null,
+"B"
+],
+[
+"whose glasses are these",
+"unknown:glasses",
+null,
+"B"
+],
+[
+"what's this plant",
+"unknown:plant",
+null,
+"B"
+],
+[
+"what's the boarding pass for",
+"unknown:boarding-pass",
+null,
+"B"
+],
+[
+"what is the certificate for",
+"unknown:certificate",
+null,
+"B"
+],
+[
+"what does the black folder say",
+"unknown:folder-cover",
+null,
+"B"
+],
+[
+"what's with the paper dated september 2018",
+"unknown:kete-note",
+null,
+"B"
+],
+[
+"what do the printed emails mean",
+[
+"igor",
+"dubrovnik"
+],
+null,
+"B"
+],
+[
+"who are the people on the steps",
+"c5",
+null,
+"B"
+],
+[
+"who is Barbara",
+null,
+null,
+"B"
+],
+[
+"who's this?",
+"igor",
+"summer-school",
+"C"
+],
+[
+"who are these people?",
+[
+"ken",
+"katie"
+],
+"family-photo",
+"C"
+],
+[
+"who are these people",
+"c5",
+"who-trip",
+"C"
+],
+[
+"who wrote this?",
+"tim",
+"lid-note",
+"C"
+],
+[
+"who's that?",
+"igor",
+"business-card",
+"C"
+],
+[
+"what's this about?",
+"titirangi",
+"cnn",
+"C"
+],
+[
+"why is this here?",
+"unknown:glasses",
+"glasses",
+"C"
+],
+[
+"what does it mean?",
+"unknown:kete-note",
+"kete-note",
+"C"
+],
+[
+"what's for dinner",
+null,
+null,
+"D"
+],
+[
+"how tall is Mount Everest",
+null,
+null,
+"D"
+],
+[
+"play some music",
+null,
+null,
+"D"
+],
+[
+"set a timer for ten minutes",
+null,
+null,
+"D"
+],
+[
+"what's the news today",
+null,
+null,
+"D"
+],
+[
+"lol",
+null,
+null,
+"D"
+],
+[
+"who is the prime minister of New Zealand",
+null,
+null,
+"D"
+],
+[
+"do you dream",
+null,
+null,
+"D"
+],
+[
+"I'm bored",
+null,
+null,
+"D"
+],
+[
+"what's 7 times 8",
+null,
+null,
+"D"
+],
+[
+"recommend a movie",
+null,
+null,
+"D"
+],
+[
+"hello?",
+null,
+null,
+"D"
+]
+]
