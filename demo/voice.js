@@ -205,32 +205,39 @@
     var stream = null, source = null, node = null, chunks = [];
     var done = false, cancelled = false, stalled = false, voiced = false, loud = 0, quiet = 0, total = 0, floor = Infinity;
 
-    listening = { stop: function () { finish(); }, cancel: function () { cancelled = true; finish(); } };
+    listening = {
+      // A moment's grace: the last pieces may still be on their way from the audio thread.
+      stop: function () { setTimeout(finish, 250); },
+      cancel: function () { cancelled = true; finish(); }
+    };
+
+    // A piece of what the microphone heard, in order. Times are the audio's own, so a busy page doesn't skew them.
+    function hear(x) {
+      if (done) return;
+      var sum = 0;
+      chunks.push(x);
+      for (var i = 0; i < x.length; i++) sum += x[i] * x[i];
+      var level = Math.sqrt(sum / x.length), secs = x.length / ctx.sampleRate;
+      total += secs;
+      // Speech is well above the quietest moment so far (the room between words).
+      floor = Math.min(floor, level);
+      if (level > Math.max(0.01, Math.min(0.05, floor * 3))) { loud += secs; quiet = 0; if (loud > 0.15) voiced = true; }
+      else quiet += secs;
+      if (hold ? total > 30 : (voiced && quiet > 1) || (!voiced && total > 7) || total > 15) finish();
+    }
 
     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } }).then(function (s) {
       stream = s;
       if (done) { release(); return; }
       source = ctx.createMediaStreamSource(s);
-      node = ctx.createScriptProcessor(4096, 1, 1);
-      node.onaudioprocess = function (e) {
-        if (done) return;
-        var x = e.inputBuffer.getChannelData(0), sum = 0;
-        chunks.push(new Float32Array(x));
-        for (var i = 0; i < x.length; i++) sum += x[i] * x[i];
-        var level = Math.sqrt(sum / x.length), secs = x.length / ctx.sampleRate;
-        total += secs;
-        // Speech is well above the quietest moment so far (the room between words).
-        floor = Math.min(floor, level);
-        if (level > Math.max(0.01, Math.min(0.05, floor * 3))) { loud += secs; quiet = 0; if (loud > 0.15) voiced = true; }
-        else quiet += secs;
-        if (hold ? total > 30 : (voiced && quiet > 1) || (!voiced && total > 7) || total > 15) finish();
-      };
-      source.connect(node);
-      node.connect(ctx.destination); // silent: needed for the recording to run
-      ui.onListening();
-      // Started outside a tap (after the built-in recogniser gave up), an iPhone
-      // may never let the recording run: ask for another tap rather than wait forever.
-      setTimeout(function () { if (!done && total === 0) { stalled = true; finish(); } }, 2500);
+      return capture(ctx, source, hear).then(function (n) {
+        node = n;
+        if (done) { release(); return; }
+        ui.onListening();
+        // Started outside a tap (after the built-in recogniser gave up), an iPhone
+        // may never let the recording run: ask for another tap rather than wait forever.
+        setTimeout(function () { if (!done && total === 0 && ctx.state !== 'running') { stalled = true; finish(); } }, 2500);
+      });
     }, function (err) {
       done = true;
       listening = null;
@@ -242,7 +249,7 @@
     });
 
     function release() {
-      if (node) { node.onaudioprocess = null; node.disconnect(); }
+      if (node) { node.onaudioprocess = null; if (node.port) node.port.onmessage = null; node.disconnect(); }
       if (source) source.disconnect();
       if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
       if (ctx.state !== 'closed' && ctx.close) ctx.close();
@@ -266,6 +273,27 @@
         if (text) ui.onDone(text); else ui.onFail('nothing');
       }, function () { ui.onFail('unavailable'); });
     }
+  }
+
+  /* Pieces of what the microphone hears, from the browser's audio thread
+     (listen-worklet.js) where it can, so a busy page loses none of it;
+     otherwise from the page itself. Resolves to the node doing it. */
+  function capture(ctx, source, hear) {
+    var onPage = function () {
+      var node = ctx.createScriptProcessor(4096, 1, 1);
+      node.onaudioprocess = function (e) { hear(new Float32Array(e.inputBuffer.getChannelData(0))); };
+      source.connect(node);
+      node.connect(ctx.destination); // silent: needed for it to run
+      return node;
+    };
+    if (!ctx.audioWorklet || !window.AudioWorkletNode) return Promise.resolve(onPage());
+    return ctx.audioWorklet.addModule('listen-worklet.js').then(function () {
+      var node = new AudioWorkletNode(ctx, 'chickencoop-capture');
+      node.port.onmessage = function (e) { hear(e.data); };
+      source.connect(node);
+      node.connect(ctx.destination); // silent, and keeps it running in every browser
+      return node;
+    }, onPage);
   }
 
   // Whisper listens at 16 kHz: average the recording down to that.
