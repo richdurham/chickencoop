@@ -467,11 +467,11 @@
 
   function toggleZoom() { zoom(!$('reader-view').classList.contains('is-zoomed')); }
 
-  // Tapping the thing does the natural thing: reach in, turn it over, turn the page, or look closer.
+  // Tapping the thing does the natural thing: turn it over, turn the page, or look closer.
+  // Taking something out of the kete or envelope is only ever the button, never a stray tap.
   function tapHand(e) {
     if (!holding) return;
-    if (stillInside(holding.item).length) reachIn();
-    else if (holding.kind === 'flip') flip();
+    if (holding.kind === 'flip') flip();
     else if (holding.kind === 'leaf') {
       var r = $('hand').getBoundingClientRect();
       leaf(e.clientX - r.left < r.width * 0.35 ? -1 : 1);
