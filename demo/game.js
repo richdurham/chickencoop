@@ -560,8 +560,16 @@
             appendMsg('her', t);
             remember('her', t);
             flagAlexaTab();
+            // Looking at something, or at the box on a phone: her answer shows over it too.
+            var over = !alexaInView();
+            if (over) subtitle('her', t, 0); else subtitle(null);
             if (then) then();
-            Voice.say(t).then(function () { face.classList.remove('is-speaking'); done(); });
+            Voice.say(t).then(function () {
+              face.classList.remove('is-speaking');
+              var still = $('subtitle').classList.contains('subtitle--her') && $('subtitle-text').textContent === t;
+              if (over && still && !$('subtitle').hidden) subtitle('her', t, 3000 + (Voice.canSpeak && Voice.voiceOn() ? 0 : t.length * 45));
+              done();
+            });
           }, Math.max(0, wait));
         });
       });
@@ -628,7 +636,7 @@
 
   // ---------- Talking out loud (voice.js does the listening and speaking) ----------
 
-  // Short enough to fit in the text box, where they show.
+  // Short enough to fit in a text box, where they show.
   var NOT_HEARD = {
     nothing: 'Didn’t catch that. Try again?',
     again: 'Tap the microphone again to talk',
@@ -636,35 +644,170 @@
     unavailable: 'Can’t listen in this browser. Type instead'
   };
 
-  /* A microphone beside a text box: tap to talk; it stops when you pause, or
-     tap again. What it heard goes in the box and is sent as if typed. */
-  function bindMic(btn, input, send) {
-    if (!Voice.canListen) { btn.hidden = true; return; }
-    var placeholder = input.placeholder, fade = null;
-    var show = function (status, text) {
+  var SETUP = 'chickencoop-setup'; // 'voice' or 'text': the player's choice on their first visit; kept through Start over
+  function setupChoice() { try { return localStorage.getItem(SETUP); } catch (e) { return null; } }
+  function saveSetup(mode) { try { localStorage.setItem(SETUP, mode); } catch (e) { /* ask again next visit */ } }
+
+  var mics = {};
+
+  /* A way to talk: a microphone button, and where to show what's happening.
+     Tap to talk (it stops when you pause, or tap again), or hold Space. */
+  function makeMic(btn, view) {
+    var fade = null, holding = false;
+    var status = function (state, text) {
       clearTimeout(fade);
-      btn.classList.toggle('is-listening', status === 'listening');
-      btn.classList.toggle('is-busy', status === 'busy');
-      btn.setAttribute('aria-pressed', String(status !== 'idle'));
-      btn.setAttribute('aria-label', status === 'listening' ? 'Stop listening' : 'Talk to Alexa');
-      input.placeholder = text || placeholder;
+      btn.classList.toggle('is-listening', state === 'listening');
+      btn.classList.toggle('is-busy', state === 'busy');
+      btn.setAttribute('aria-pressed', String(state !== 'idle'));
+      btn.setAttribute('aria-label', state === 'listening' ? 'Stop listening' : 'Talk to Alexa');
+      view.show(state, text);
       $('voice-status').textContent = text || '';
     };
     var ui = {
-      onListening: function () { show('listening', 'Listening…'); },
-      onHeard: function (text) { input.value = text; },
-      onWaiting: function (f) { input.value = ''; show('busy', 'Getting ready to listen…' + (f > 0 ? ' ' + Math.round(f * 100) + '%' : '')); },
-      onWorking: function () { input.value = ''; show('busy', 'Working out what you said…'); },
-      onDone: function (text) { input.value = ''; show('idle'); send(text); },
+      onListening: function () { status('listening', holding ? 'Listening… let go of Space when you’re done' : 'Listening…'); },
+      onHeard: function (text) { view.heard(text); },
+      onWaiting: function (f) { view.heard(''); status('busy', 'Getting ready to listen…' + (f > 0 ? ' ' + Math.round(f * 100) + '%' : '')); },
+      onWorking: function () { view.heard(''); status('busy', 'Working out what you said…'); },
+      onDone: function (text) {
+        view.heard('');
+        status('idle');
+        if (setupChoice() !== 'voice') saveSetup('voice'); // they've talked, so Space can work for them too
+        view.send(text);
+      },
       onFail: function (why) {
-        input.value = '';
-        show('idle', NOT_HEARD[why]);
-        fade = setTimeout(function () { show('idle'); }, 6000);
+        view.heard('');
+        status('idle', NOT_HEARD[why]);
+        fade = setTimeout(function () { status('idle'); }, 6000);
       }
     };
+    var mic = {
+      button: btn,
+      start: function (hold) {
+        if (Voice.isListening() || btn.disabled || btn.classList.contains('is-busy')) return false;
+        holding = !!hold;
+        status('listening', 'Starting…');
+        Voice.listen(ui, { hold: holding });
+        return true;
+      }
+    };
+    if (!Voice.canListen) btn.hidden = true;
     btn.addEventListener('click', function () {
-      if (Voice.isListening()) Voice.stop();
-      else if (!btn.classList.contains('is-busy')) { show('listening', 'Starting…'); Voice.listen(ui); }
+      if (Voice.isListening()) Voice.stop(); else mic.start(false);
+    });
+    return mic;
+  }
+
+  // Next to a text box: what's happening shows in the box.
+  function inBox(input, send) {
+    var placeholder = input.placeholder;
+    return {
+      show: function (state, text) { input.placeholder = text || placeholder; },
+      heard: function (text) { input.value = text; },
+      send: send
+    };
+  }
+
+  // Over the box or something in hand, where Alexa's panel isn't showing: subtitles.
+  var overThings = {
+    show: function (state, text) { if (text) subtitle('note', text, state === 'idle' ? 5000 : 0); else if (state === 'idle') subtitle(null); },
+    heard: function (text) { if (text) subtitle('you', text, 0); },
+    send: function (text) { subtitle('you', text, 0); ask(text); }
+  };
+
+  var subtitleTimer = null;
+
+  /* Subtitles: what the player said and what Alexa answered, when her panel is
+     out of sight (something in hand, or the box tab on a phone). ms 0 keeps it up. */
+  function subtitle(who, text, ms) {
+    var el = $('subtitle');
+    clearTimeout(subtitleTimer);
+    if (!who) { el.hidden = true; return; }
+    el.className = 'subtitle subtitle--' + who;
+    $('subtitle-who').textContent = who === 'her' ? 'Alexa' : who === 'you' ? 'You' : '';
+    $('subtitle-text').textContent = who === 'you' ? '“' + text + '”' : text;
+    // Above the buttons of the thing in hand, if one is open.
+    var foot = $('reader').hidden ? null : $('reader').querySelector('.reader__foot');
+    el.style.bottom = foot ? Math.round(window.innerHeight - foot.getBoundingClientRect().top + 12) + 'px' : '';
+    el.hidden = false;
+    if (ms) subtitleTimer = setTimeout(function () { el.hidden = true; }, ms);
+  }
+
+  function alexaInView() {
+    return !$('game').hidden && $('reader').hidden && $('alexa').offsetParent !== null;
+  }
+
+  // The microphone for wherever the player is: the one Space uses.
+  function micHere() {
+    var mic = !$('intro').hidden ? mics.intro
+      : !$('ending').hidden ? null
+      : !$('reader').hidden ? mics.reader
+      : alexaInView() ? mics.ask
+      : mics.box;
+    return mic && !mic.button.disabled ? mic : null;
+  }
+
+  /* Hold Space to talk from anywhere: while looking at something, digging in
+     the box, or on the closed box. Not while typing, and only for players who
+     chose to talk. Enter still picks things up and presses buttons. */
+  function bindSpace() {
+    var held = null;
+    var typing = function (el) { return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable); };
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (held) { e.preventDefault(); return; } // the key repeating while held
+      if (typing(e.target) || setupChoice() !== 'voice' || !$('setup').hidden) return;
+      var mic = micHere();
+      if (!mic) return;
+      e.preventDefault();
+      if (mic.start(true)) held = mic;
+    });
+    var letGo = function (e) {
+      if (!held) return;
+      if (e && e.type === 'keyup' && e.key !== ' ') return;
+      if (e && e.preventDefault) e.preventDefault();
+      held = null;
+      Voice.stop();
+    };
+    document.addEventListener('keyup', letGo);
+    window.addEventListener('blur', letGo); // the key-up would never arrive
+  }
+
+  /* First visit: talk or type? If the browser already lets this page use the
+     microphone there's nothing to ask. Choosing to talk asks for it now. */
+  function offerSetup() {
+    if (setupChoice() || !Voice.canListen) return;
+    Voice.micPermission().then(function (state) {
+      if (state === 'granted') { saveSetup('voice'); return; }
+      $('setup-note').textContent = '';
+      $('setup').hidden = false;
+      $('setup-voice').focus();
+    });
+  }
+
+  function chooseSetup(mode) {
+    saveSetup(mode);
+    Voice.setVoiceOn(mode === 'voice');
+    renderVoiceToggle();
+    $('setup').hidden = true;
+    $('intro-input').focus();
+  }
+
+  function bindSetup() {
+    $('setup-voice').addEventListener('click', function () {
+      var note = $('setup-note');
+      note.textContent = 'Allow the microphone when your browser asks.';
+      Voice.requestMic().then(function (result) {
+        if (result === 'granted') { chooseSetup('voice'); return; }
+        note.textContent = result === 'denied'
+          ? 'Your browser has blocked the microphone for this page. Allow it in the site settings and try again, or play with the keyboard.'
+          : 'No microphone was found. Connect one and try again, or play with the keyboard.';
+      });
+    });
+    $('setup-text').addEventListener('click', function () { chooseSetup('text'); });
+    $('setup').addEventListener('keydown', function (e) {
+      if (e.key !== 'Tab') return;
+      var a = $('setup-voice'), b = $('setup-text');
+      if (document.activeElement === (e.shiftKey ? a : b)) { e.preventDefault(); (e.shiftKey ? b : a).focus(); }
     });
   }
 
@@ -701,6 +844,7 @@
   }
 
   function renderEnding() {
+    subtitle(null);
     var choice = state.ending.choice;
     $('ending-title').textContent = choice === 'release' ? 'You released the virus.' : 'You destroyed the virus.';
 
@@ -777,8 +921,14 @@
 
   function onIntro(e) {
     e.preventDefault();
-    var input = $('intro-input');
-    tryOpen(input.value.trim() || input.placeholder, true);
+    var said = $('intro-input').value.trim();
+    if (!said) {
+      // The line in the empty box is only a hint: it has to be said or typed.
+      $('intro-reply').textContent = Voice.canListen && !$('intro-mic').hidden ? 'Type it in, or tap the microphone and say it.' : 'Type it in first.';
+      $('intro-input').focus();
+      return;
+    }
+    tryOpen(said, true);
   }
 
   // Typed or said: only the line itself opens the box.
@@ -802,6 +952,7 @@
   function restart() {
     Voice.cancel();
     Voice.hush();
+    subtitle(null);
     wipe();
     state = fresh();
     lastSeen = null;
@@ -837,8 +988,13 @@
       input.value = '';
     });
 
-    bindMic($('intro-mic'), $('intro-input'), tryOpen);
-    bindMic($('ask-mic'), $('ask-input'), ask);
+    mics.intro = makeMic($('intro-mic'), inBox($('intro-input'), tryOpen));
+    mics.ask = makeMic($('ask-mic'), inBox($('ask-input'), ask));
+    mics.reader = makeMic($('reader-mic'), overThings);
+    mics.box = makeMic($('box-mic'), overThings);
+    bindSpace();
+    bindSetup();
+    offerSetup();
     renderVoiceToggle();
     $('voice-toggle').addEventListener('click', function () {
       Voice.setVoiceOn(!Voice.voiceOn());
