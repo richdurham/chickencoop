@@ -9,7 +9,7 @@
   var state = fresh();
 
   function fresh() {
-    return { started: false, opened: [], asked: [], log: [], ending: null, fallback: 0 };
+    return { started: false, opened: [], log: [], ending: null, fallback: 0, layout: {}, handled: false };
   }
 
   // ---------- Saving (best effort: private windows may block storage) ----------
@@ -48,7 +48,19 @@
     if (window.Meaning) window.Meaning.start();
   }
 
-  // ---------- The box ----------
+  // ---------- The box on the table ----------
+
+  /* The inside of the box as percentages of the desk (left, top, width, height).
+     The desk is 5:4 on wide screens, with the lid beside the box, and 3:5 on
+     narrow ones, with the lid below it. */
+  var DESKS = {
+    wide: { aspect: 5 / 4, box: [8, 10, 64, 80] },
+    tall: { aspect: 3 / 5, box: [5, 3, 90, 56] }
+  };
+  var deskShape = 'wide';
+
+  // How some things sit: photos in acrylic stands, a loose heap of coins, a binder.
+  var LOOK = { 'family-photo': 'stand', 'summer-school': 'stand', 'who-trip': 'stand', coins: 'heap', 'folder-cover': 'folder' };
 
   function isOpened(id) { return state.opened.indexOf(id) !== -1; }
 
@@ -57,81 +69,173 @@
     return null;
   }
 
-  function pageSrc(item, p) { return 'box/' + item.id + '-' + (p + 1) + '.jpg'; }
-
-  /* A small, fixed tilt per item so the table looks put down by hand. */
-  function tilt(i) { return (((i * 37) % 9) - 4) * 0.75; }
-
-  function renderBox() {
-    var root = $('groups');
-    root.textContent = '';
-    var i = 0;
-    GROUPS.forEach(function (group) {
-      var section = document.createElement('section');
-      section.className = 'group';
-      var h = document.createElement('h2');
-      h.className = 'group__label';
-      h.textContent = group.label;
-      section.appendChild(h);
-
-      var list = document.createElement('ul');
-      list.className = 'items';
-      ITEMS.filter(function (it) { return it.group === group.id; }).forEach(function (item) {
-        list.appendChild(itemEl(item, i++));
-      });
-      section.appendChild(list);
-      root.appendChild(section);
-    });
+  function markSeen(id) {
+    if (isOpened(id)) return;
+    state.opened.push(id);
+    save();
     renderProgress();
   }
 
-  function itemEl(item, i) {
-    var li = document.createElement('li');
-    li.className = 'item';
-    li.style.setProperty('--i', i);
-    li.style.setProperty('--rot', tilt(i) + 'deg');
+  function pageSrc(item, p) {
+    return item.cut ? 'box/cut/' + item.id + '.webp' : 'box/' + item.id + '-' + (p + 1) + '.jpg';
+  }
 
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'item__btn';
-    btn.dataset.item = item.id;
+  function pileSrc(item) {
+    return item.cut ? 'box/cut/thumb/' + item.id + '.webp' : 'box/thumb/' + item.id + '.jpg';
+  }
 
-    var print = document.createElement('span');
-    print.className = 'item__print' + (item.pages > 1 ? ' item__print--stack' : '');
-    var img = document.createElement('img');
-    img.src = 'box/thumb/' + item.id + '.jpg';
-    img.width = item.w;
-    img.height = item.h;
-    img.alt = '';
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    print.appendChild(img);
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-    var cap = document.createElement('span');
-    cap.className = 'item__caption';
-    var name = document.createElement('span');
-    name.className = 'item__name';
-    name.textContent = item.label;
-    cap.appendChild(name);
+  function pileIds() { return [LID.id].concat(PILE.map(function (p) { return p[0]; })); }
 
-    var meta = document.createElement('span');
-    var seen = isOpened(item.id);
-    if (seen) {
-      meta.className = 'item__seen';
-      meta.textContent = 'seen';
-    } else if (item.pages > 1) {
-      meta.textContent = item.pages + (item.sides ? ' sides' : ' pages');
-    }
-    if (meta.textContent) cap.appendChild(meta);
+  /* Where a thing lies: [x, y, width, angle, z], in the box terms PILE uses.
+     Where the player left it wins over the starting arrangement. */
+  function placeOf(id) {
+    if (state.layout[id]) return state.layout[id].slice();
+    if (id === LID.id) return LID[deskShape].concat([0]);
+    for (var i = 0; i < PILE.length; i++) if (PILE[i][0] === id) return PILE[i].slice(1).concat([i + 1]);
+    return [50, 50, 20, 0, 1];
+  }
 
-    btn.appendChild(print);
-    btn.appendChild(cap);
-    btn.setAttribute('aria-label', item.label + (seen ? ', seen' : '') +
-      (item.pages > 1 ? ', ' + item.pages + (item.sides ? ' sides' : ' pages') : '') + '. ' + item.caption);
-    btn.addEventListener('click', function () { openReader(item.id); });
+  // Keep a thing's centre on the desk, wherever the box sits on it.
+  function clampX(x) { var b = DESKS[deskShape].box; return clamp(x, (2 - b[0]) / b[2] * 100, (98 - b[0]) / b[2] * 100); }
+  function clampY(y) { var b = DESKS[deskShape].box; return clamp(y, (2 - b[1]) / b[3] * 100, (98 - b[1]) / b[3] * 100); }
 
-    li.appendChild(btn);
-    return li;
+  function thingEl(id) { return $('desk').querySelector('.thing[data-item="' + id + '"]'); }
+
+  function place(el, p) {
+    var b = DESKS[deskShape].box;
+    el.style.left = (b[0] + clampX(p[0]) * b[2] / 100) + '%';
+    el.style.top = (b[1] + clampY(p[1]) * b[3] / 100) + '%';
+    el.style.width = (p[2] * b[2] / 100) + '%';
+    el.style.setProperty('--r', p[3] + 'deg');
+    el.style.zIndex = p[4];
+  }
+
+  function placeAll() {
+    pileIds().forEach(function (id) { var el = thingEl(id); if (el) place(el, placeOf(id)); });
+  }
+
+  /* Fit the desk into its pane and put the box on it. */
+  function fitDesk() {
+    var pane = $('box'), desk = $('desk'), cs = getComputedStyle(pane);
+    var w = pane.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var h = pane.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    if (w <= 0 || h <= 0) return; // the other tab is showing on a phone
+    var shape = w / h >= 1 ? 'wide' : 'tall', aspect = DESKS[shape].aspect;
+    var dw = Math.min(w, h * aspect);
+    desk.style.width = Math.floor(dw) + 'px';
+    desk.style.height = Math.floor(dw / aspect) + 'px';
+    desk.style.setProperty('--wall', Math.max(8, Math.round(dw * 0.022)) + 'px');
+    var b = DESKS[shape].box, carton = $('carton');
+    carton.style.left = 'calc(' + b[0] + '% - var(--wall))';
+    carton.style.top = 'calc(' + b[1] + '% - var(--wall))';
+    carton.style.width = b[2] + '%';
+    carton.style.height = b[3] + '%';
+    if (shape !== deskShape) { deskShape = shape; placeAll(); }
+  }
+
+  function renderBox() {
+    var desk = $('desk');
+    Array.prototype.forEach.call(desk.querySelectorAll('.thing'), function (el) { el.remove(); });
+    pileIds().forEach(function (id, i) {
+      var item = itemById(id);
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'thing' + (LOOK[id] ? ' thing--' + LOOK[id] : '');
+      el.dataset.item = id;
+      el.style.setProperty('--i', i);
+      el.setAttribute('aria-label', item.label);
+      el.setAttribute('aria-describedby', 'thing-help');
+      var img = document.createElement('img');
+      img.src = pileSrc(item);
+      img.alt = '';
+      img.draggable = false;
+      img.decoding = 'async';
+      el.appendChild(img);
+      place(el, placeOf(id));
+      bindThing(el, id);
+      desk.appendChild(el);
+    });
+    $('desk-hint').hidden = !!state.handled;
+    renderProgress();
+  }
+
+  function bringToFront(id) {
+    var top = 0;
+    pileIds().forEach(function (other) { top = Math.max(top, placeOf(other)[4]); });
+    var p = placeOf(id);
+    if (p[4] !== top || !state.layout[id]) p[4] = top + 1;
+    state.layout[id] = p;
+    thingEl(id).style.zIndex = p[4];
+  }
+
+  function handled() {
+    if (state.handled) return;
+    state.handled = true;
+    $('desk-hint').hidden = true;
+    save();
+  }
+
+  /* Drag to move; a tap (or Enter) picks it up; arrow keys nudge it along. */
+  function bindThing(el, id) {
+    var drag = null;
+    el.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      el.setPointerCapture(e.pointerId);
+      var r = $('desk').getBoundingClientRect(), b = DESKS[deskShape].box;
+      drag = { x: e.clientX, y: e.clientY, from: placeOf(id), moved: false,
+        unitX: r.width * b[2] / 10000, unitY: r.height * b[3] / 10000 }; // pixels per box unit
+    });
+    el.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!drag.moved) {
+        if (Math.abs(dx) + Math.abs(dy) < 6) return;
+        drag.moved = true;
+        bringToFront(id);
+        el.classList.add('is-held');
+      }
+      var p = state.layout[id];
+      p[0] = clampX(drag.from[0] + dx / drag.unitX);
+      p[1] = clampY(drag.from[1] + dy / drag.unitY);
+      place(el, p);
+    });
+    var end = function (e) {
+      if (!drag) return;
+      var moved = drag.moved;
+      drag = null;
+      if (moved) {
+        var p = state.layout[id];
+        p[3] = Math.round((p[3] + Math.random() * 8 - 4) * 10) / 10; // nothing lands quite the same way twice
+        place(el, p);
+        el.classList.remove('is-held');
+        handled();
+        save();
+      } else if (e.type === 'pointerup') {
+        bringToFront(id);
+        save();
+        openReader(id);
+      }
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    // Keyboard Enter or Space (a click with no pointer behind it).
+    el.addEventListener('click', function (e) { if (e.detail === 0) { bringToFront(id); save(); openReader(id); } });
+    el.addEventListener('keydown', function (e) {
+      var s = e.shiftKey ? 10 : 3;
+      var d = { ArrowLeft: [-s, 0], ArrowRight: [s, 0], ArrowUp: [0, -s], ArrowDown: [0, s] }[e.key];
+      if (!d) return;
+      e.preventDefault();
+      bringToFront(id);
+      var p = state.layout[id];
+      p[0] = clampX(p[0] + d[0]);
+      p[1] = clampY(p[1] + d[1]);
+      place(el, p);
+      handled();
+      save();
+    });
   }
 
   function renderProgress() {
@@ -141,54 +245,148 @@
       : 'You’ve looked at ' + n + ' of ' + ITEMS.length + ' things';
   }
 
-  // ---------- Reader ----------
+  // ---------- In hand ----------
 
-  var reading = null; // { item, page }
+  var holding = null; // { item, kind: 'flip' | 'leaf' | 'single', pages, at, turned }
   var returnFocus = null;
+  var swipe = null;
+
+  /* Two sides turn over; more pages, or a folder's contents, are leafed through. */
+  function handFor(item) {
+    var inside = ITEMS.filter(function (it) { return it.in === item.id; });
+    var pages = [];
+    if (inside.length) {
+      inside.forEach(function (doc) {
+        for (var p = 0; p < doc.pages; p++) {
+          pages.push({ item: doc, p: p, label: doc.label + (doc.pages > 1 ? ', page ' + (p + 1) + ' of ' + doc.pages : '') });
+        }
+      });
+      return { kind: 'leaf', pages: pages };
+    }
+    for (var i = 0; i < item.pages; i++) {
+      var side = item.sides ? item.sides[i] : 'Page ' + (i + 1);
+      pages.push({ item: item, p: i, label: item.pages > 1 ? side + (item.pages > 2 ? ' (' + (i + 1) + ' of ' + item.pages + ')' : '') : '' });
+    }
+    if (item.pages === 2 && item.sides) return { kind: 'flip', pages: pages };
+    return { kind: item.pages > 1 ? 'leaf' : 'single', pages: pages };
+  }
+
+  function pageImg(pg) {
+    var img = document.createElement('img');
+    img.src = pageSrc(pg.item, pg.p);
+    img.alt = pg.item.label + (pg.label ? ', ' + pg.label.toLowerCase() : '') + '. ' + pg.item.caption;
+    img.draggable = false;
+    return img;
+  }
+
+  function pageEl(pg) {
+    var div = document.createElement('div');
+    div.className = 'page';
+    div.appendChild(pageImg(pg));
+    return div;
+  }
 
   function openReader(id) {
     var item = itemById(id);
     if (!item) return;
-    reading = { item: item, page: 0 };
-    lastSeen = { id: id, at: Date.now() };
+    var h = handFor(item);
+    holding = { item: item, kind: h.kind, pages: h.pages, at: 0, turned: false };
     returnFocus = document.activeElement;
 
     $('reader-title').textContent = item.label;
-    $('reader-caption').textContent = item.caption;
     renderCredit(item.credit);
-    $('reader-pager').hidden = item.pages < 2;
-    $('reader-ask').hidden = !item.ask;
+    var hand = $('hand');
+    hand.className = 'hand hand--' + h.kind;
+    hand.textContent = '';
+    if (h.kind === 'flip') {
+      h.pages.forEach(function (pg, i) {
+        var face = document.createElement('div');
+        face.className = 'face face--' + (i ? 'back' : 'front');
+        face.appendChild(pageImg(pg));
+        hand.appendChild(face);
+      });
+    } else {
+      hand.appendChild(pageEl(h.pages[0]));
+    }
+    $('reader-prev').hidden = $('reader-next').hidden = h.kind !== 'leaf';
+    $('reader-turn').hidden = h.kind !== 'flip';
+    $('reader-turn').textContent = 'Turn it over';
     zoom(false);
-    showPage();
 
     $('reader').hidden = false;
     document.body.style.overflow = 'hidden';
-    (item.pages > 1 ? $('reader-next') : $('reader').querySelector('.reader__x')).focus();
-
-    if (!isOpened(id)) {
-      state.opened.push(id);
-      save();
-      renderBox();
-      renderChips();
-    }
+    markSeen(id);
+    showAt();
+    var first = h.kind === 'leaf' ? $('reader-next') : h.kind === 'flip' ? $('reader-turn') : $('reader').querySelector('.reader__x');
+    first.focus();
   }
 
-  function showPage() {
-    var item = reading.item, p = reading.page;
-    var where = item.sides
-      ? item.sides[p] + ' (' + (p + 1) + ' of ' + item.pages + ')'
-      : 'Page ' + (p + 1) + ' of ' + item.pages;
+  function current() { return holding.pages[holding.kind === 'flip' ? (holding.turned ? 1 : 0) : holding.at]; }
 
-    var img = $('reader-img');
-    img.src = pageSrc(item, p);
-    img.alt = item.label + (item.pages > 1 ? ', ' + where.toLowerCase() : '') + '. ' + item.caption;
-    $('reader-full').href = pageSrc(item, p);
-    $('reader-page').textContent = where;
-    $('reader-prev').disabled = p === 0;
-    $('reader-next').disabled = p === item.pages - 1;
-    $('reader-view').scrollTop = 0;
+  function showAt() {
+    var pg = current();
+    $('reader-page').textContent = pg.label;
+    $('reader-prev').disabled = holding.at === 0;
+    $('reader-next').disabled = holding.at === holding.pages.length - 1;
+    $('reader-full').href = pageSrc(pg.item, pg.p);
+    lastSeen = { id: pg.item.id, at: Date.now() };
+    markSeen(pg.item.id);
+    var next = holding.kind === 'leaf' && holding.pages[holding.at + 1];
+    if (next) new Image().src = pageSrc(next.item, next.p);
+    fitHand();
+  }
 
-    if (p + 1 < item.pages) new Image().src = pageSrc(item, p + 1);
+  /* Size the thing in hand to fit the view, or the view's width when looking closer. */
+  function fitHand() {
+    if (!holding) return;
+    var hand = $('hand'), view = $('reader-view');
+    var imgs = hand.querySelectorAll(holding.kind === 'flip' ? '.face--front img' : '.page:not(.page--turning) img');
+    var img = imgs[imgs.length - 1];
+    if (!img) return;
+    if (!img.naturalWidth) { img.addEventListener('load', fitHand, { once: true }); return; }
+    var aspect = img.naturalWidth / img.naturalHeight;
+    var vw = view.clientWidth, vh = view.clientHeight;
+    var w = view.classList.contains('is-zoomed') ? vw : Math.min(vw, vh * aspect);
+    hand.style.width = Math.floor(w) + 'px';
+    hand.style.height = Math.floor(w / aspect) + 'px';
+  }
+
+  function flip() {
+    if (!holding || holding.kind !== 'flip') return;
+    holding.turned = !holding.turned;
+    $('hand').classList.toggle('is-turned', holding.turned);
+    $('reader-turn').textContent = holding.turned ? 'Turn it back' : 'Turn it over';
+    showAt();
+  }
+
+  /* Turn a page: the current one swings away to reveal the next underneath,
+     or the previous one swings back over it. */
+  function leaf(step) {
+    if (!holding || holding.kind !== 'leaf') return;
+    var to = holding.at + step;
+    if (to < 0 || to >= holding.pages.length) return;
+    var hand = $('hand');
+    // Finish any turn still in motion.
+    Array.prototype.forEach.call(hand.querySelectorAll('.page--turning'), function (el) { el.remove(); });
+    var pages = hand.querySelectorAll('.page');
+    for (var i = 0; i < pages.length - 1; i++) pages[i].remove();
+    var under = hand.querySelector('.page');
+    under.classList.remove('page--returning');
+
+    var fresh = pageEl(holding.pages[to]);
+    if (reduceMotion) {
+      hand.replaceChild(fresh, under);
+    } else if (step > 0) {
+      hand.insertBefore(fresh, under);
+      under.classList.add('page--turning');
+      under.addEventListener('animationend', function () { under.remove(); }, { once: true });
+    } else {
+      fresh.classList.add('page--returning');
+      hand.appendChild(fresh);
+      fresh.addEventListener('animationend', function () { fresh.classList.remove('page--returning'); under.remove(); }, { once: true });
+    }
+    holding.at = to;
+    showAt();
   }
 
   /* Photos that aren't from Katie's box carry their licence credit. */
@@ -205,35 +403,37 @@
     el.appendChild(a);
   }
 
-  /* Zoom stays on while turning pages, so an article can be read through. */
+  /* Looking closer stays on while turning pages, so an article can be read through. */
   function zoom(on) {
-    $('reader-view').classList.toggle('is-zoomed', on);
-    $('reader-zoom').textContent = on ? 'Fit to screen' : 'Zoom in';
+    var view = $('reader-view');
+    view.classList.toggle('is-zoomed', on);
+    view.scrollTop = 0;
+    $('reader-zoom').textContent = on ? 'Step back' : 'Look closer';
     $('reader-zoom').setAttribute('aria-pressed', String(on));
+    fitHand();
   }
 
-  function toggleZoom() {
-    zoom(!$('reader-view').classList.contains('is-zoomed'));
-  }
+  function toggleZoom() { zoom(!$('reader-view').classList.contains('is-zoomed')); }
 
-  function turn(step) {
-    if (!reading) return;
-    var p = reading.page + step;
-    if (p < 0 || p >= reading.item.pages) return;
-    reading.page = p;
-    showPage();
+  // Tapping the thing does the natural thing: turn it over, turn the page, or look closer.
+  function tapHand(e) {
+    if (!holding) return;
+    if (holding.kind === 'flip') flip();
+    else if (holding.kind === 'leaf') {
+      var r = $('hand').getBoundingClientRect();
+      leaf(e.clientX - r.left < r.width * 0.35 ? -1 : 1);
+    } else toggleZoom();
   }
 
   function closeReader() {
     if ($('reader').hidden) return;
     $('reader').hidden = true;
-    $('reader-img').removeAttribute('src');
+    $('hand').textContent = '';
     document.body.style.overflow = '';
-    var id = reading && reading.item.id;
-    reading = null;
-    // The box re-renders when something is seen for the first time, so find the button again.
-    var again = id && document.querySelector('.item__btn[data-item="' + id + '"]');
-    if (again) again.focus();
+    var id = holding && holding.item.id;
+    holding = null;
+    var again = id && thingEl(id);
+    if (again) again.focus({ preventScroll: true });
     else if (returnFocus && document.body.contains(returnFocus)) returnFocus.focus();
   }
 
@@ -353,9 +553,7 @@
     if (!text) return;
     var code = codeReply(text);
     you(text, !!code);
-    if (state.asked.indexOf(text) === -1) state.asked.push(text);
     save();
-    renderChips();
     if (code && code.final) lockAsk(true);
     var gen = generation;
     her(code ? code.text : understand(text), code && code.final ? function () {
@@ -366,36 +564,7 @@
   function lockAsk(locked) {
     $('ask-input').disabled = locked;
     $('ask').querySelector('button').disabled = locked;
-    $('chips').hidden = locked;
     $('codes').hidden = locked;
-  }
-
-  function renderChips() {
-    var o = isOpened;
-    var options = [
-      'Who is Katie?',
-      'What is C5 Biotech?',
-      (o('summer-school') || o('business-card') || o('emails') || o('certificate')) && 'Who is Igor Kutznetsov?',
-      (o('lid-note') || o('card')) && 'Who is Tim?',
-      o('family-photo') && 'Who is Ken?',
-      o('emails') && 'Tell me about the conference in Dubrovnik',
-      o('coins') && 'Are the coins euros?',
-      'Is the virus harmful to humans?',
-      (o('council') || o('cnn')) && 'What is the rat problem?',
-      o('kete') && 'Can we be infected by the contents of the box?',
-      'What would you choose?'
-    ].filter(function (q) { return q && state.asked.indexOf(q) === -1; }).slice(0, 4);
-
-    var box = $('chips');
-    box.textContent = '';
-    options.forEach(function (q) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'chip';
-      b.textContent = q;
-      b.addEventListener('click', function () { ask(q); });
-      box.appendChild(b);
-    });
   }
 
   // ---------- Mobile tabs ----------
@@ -405,10 +574,11 @@
     $('tab-box').setAttribute('aria-selected', String(view === 'box'));
     $('tab-alexa').setAttribute('aria-selected', String(view === 'alexa'));
     if (view === 'alexa') { $('tab-alexa-new').hidden = true; scrollLog(); }
+    else fitDesk();
   }
 
   function flagAlexaTab() {
-    if (document.querySelector('.stage').dataset.view === 'box' && window.matchMedia('(max-width: 860px)').matches) {
+    if (document.querySelector('.stage').dataset.view === 'box' && narrow()) {
       $('tab-alexa-new').hidden = false;
     }
   }
@@ -463,8 +633,9 @@
     $('intro').hidden = true;
     $('ending').hidden = true;
     $('game').hidden = false;
+    showView('alexa'); // on phones Alexa's tab comes first: she opens the conversation
     renderBox();
-    renderChips();
+    fitDesk();
 
     var log = $('log');
     log.textContent = '';
@@ -480,9 +651,10 @@
       save();
       WELCOME.forEach(function (line) { her(line); });
     }
-    var first = document.querySelector('.item__btn');
-    if (first) first.focus({ preventScroll: true });
+    if (!narrow()) $('ask-input').focus({ preventScroll: true });
   }
+
+  function narrow() { return window.matchMedia('(max-width: 860px)').matches; }
 
   function openCoop() {
     var intro = $('intro');
@@ -526,7 +698,7 @@
     $('resume-row').hidden = true;
     $('intro-input').value = '';
     $('intro-reply').textContent = '';
-    showView('box');
+    showView('alexa');
     window.scrollTo(0, 0);
     $('intro-input').focus();
   }
@@ -561,25 +733,42 @@
     $('reader').addEventListener('click', function (e) {
       if (e.target.closest('[data-close]')) closeReader();
     });
-    $('reader-prev').addEventListener('click', function () { turn(-1); });
-    $('reader-next').addEventListener('click', function () { turn(1); });
+    $('reader-prev').addEventListener('click', function () { leaf(-1); });
+    $('reader-next').addEventListener('click', function () { leaf(1); });
+    $('reader-turn').addEventListener('click', flip);
     $('reader-zoom').addEventListener('click', toggleZoom);
-    $('reader-img').addEventListener('click', toggleZoom);
-    $('reader-ask').addEventListener('click', function () {
-      var q = reading && reading.item.ask;
-      closeReader();
-      showView('alexa');
-      if (q) ask(q);
-      $('ask-input').focus({ preventScroll: true });
+
+    // Tap the thing in hand, or swipe across it to turn the page.
+    var hand = $('hand');
+    hand.addEventListener('pointerdown', function (e) { swipe = { x: e.clientX, y: e.clientY }; });
+    hand.addEventListener('pointerup', function (e) {
+      if (!swipe) return;
+      var dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
+      swipe = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5 && holding && holding.kind !== 'single') {
+        if (holding.kind === 'leaf') leaf(dx < 0 ? 1 : -1); else flip();
+      } else if (Math.abs(dx) + Math.abs(dy) < 10) {
+        tapHand(e);
+      }
     });
 
     document.addEventListener('keydown', function (e) {
       if ($('reader').hidden) return;
       if (e.key === 'Escape') closeReader();
-      else if (e.key === 'ArrowRight') turn(1);
-      else if (e.key === 'ArrowLeft') turn(-1);
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        if (holding && holding.kind === 'leaf') leaf(e.key === 'ArrowRight' ? 1 : -1);
+        else if (holding && holding.kind === 'flip') flip();
+      }
       trapFocus(e);
     });
+
+    // Keep the desk fitted to its pane, and the thing in hand fitted to the view.
+    var refit = function () { if (!$('game').hidden) fitDesk(); fitHand(); };
+    if (window.ResizeObserver) {
+      new ResizeObserver(function () { if (!$('game').hidden) fitDesk(); }).observe($('box'));
+      new ResizeObserver(function () { fitHand(); }).observe($('reader-view'));
+    }
+    window.addEventListener('resize', refit);
 
     $('tab-box').addEventListener('click', function () { showView('box'); });
     $('tab-alexa').addEventListener('click', function () { showView('alexa'); });
