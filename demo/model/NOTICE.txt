@@ -1,0 +1,12 @@
+all-MiniLM-L6-v2 sentence-embedding model, used by the demo to match players'
+questions to Alexa's scripted answers.
+
+Model:       sentence-transformers/all-MiniLM-L6-v2
+             https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2
+ONNX build:  Xenova/all-MiniLM-L6-v2 (onnx/model_quantized.onnx)
+             https://huggingface.co/Xenova/all-MiniLM-L6-v2
+Licence:     Apache License 2.0 (full text in ../lib/LICENSE-transformers.js.txt)
+
+The files are unmodified copies. model_quantized.onnx has SHA-256
+afdb6f1a0e45b715d0bb9b11772f032c399babd23bfc31fed1c170afc848bdb1,
+matching the Hugging Face repository.

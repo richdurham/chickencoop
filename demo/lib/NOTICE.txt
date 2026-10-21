@@ -1,0 +1,9 @@
+Third-party code used by the demo to run the sentence-embedding model in the browser.
+
+transformers.min.js            Transformers.js 3.8.1 (@huggingface/transformers)
+                               Apache License 2.0, see LICENSE-transformers.js.txt
+ort-wasm-simd-threaded.js      ONNX Runtime Web 1.22.0-dev.20250409-89f8206ba4 (onnxruntime-web),
+ort-wasm-simd-threaded.wasm    CPU build. The .js file is the package's
+                               ort-wasm-simd-threaded.mjs renamed so every web
+                               host serves it as JavaScript.
+                               MIT License, see LICENSE-onnxruntime-web.txt
