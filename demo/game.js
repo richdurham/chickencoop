@@ -517,14 +517,24 @@
     var grip = $('grip'), closer = isCloser(), straight = $('reader-straight');
     if (ease !== undefined) grip.classList.toggle('is-easing', ease);
     grip.style.transform = 'translate(' + pose.x + 'px, ' + pose.y + 'px) rotate(' + pose.a + 'deg) scale(' + pose.s + ')';
-    $('reader-view').classList.toggle('is-zoomed', closer);
-    $('reader-zoom').textContent = closer ? 'Step back' : 'Look closer';
-    $('reader-zoom').setAttribute('aria-pressed', String(closer));
-    var wasFocused = document.activeElement === straight;
-    straight.hidden = Math.abs(unwound(pose.a)) < 0.5 &&
+    // The buttons change only now and then; leaving them be keeps a drag light.
+    var zoomBtn = $('reader-zoom'), label = closer ? 'Step back' : 'Look closer';
+    if (zoomBtn.textContent !== label) {
+      $('reader-view').classList.toggle('is-zoomed', closer);
+      zoomBtn.textContent = label;
+      zoomBtn.setAttribute('aria-pressed', String(closer));
+    }
+    var hide = Math.abs(unwound(pose.a)) < 0.5 &&
       (closer || (Math.abs(pose.s - 1) < 0.01 && Math.abs(pose.x) + Math.abs(pose.y) < 2));
-    if (straight.hidden && wasFocused) $('reader-zoom').focus();
+    if (straight.hidden !== hide) {
+      var wasFocused = document.activeElement === straight;
+      straight.hidden = hide;
+      if (hide && wasFocused) zoomBtn.focus();
+    }
   }
+
+  // Held in the fingers (or gliding, or under the scroll wheel): see .grip.is-handling.
+  function handling(on) { $('grip').classList.toggle('is-handling', on); }
 
   /* Before gliding to a new angle, take any whole turns off the old one (it looks
      the same), so the glide goes the short way round. */
@@ -637,6 +647,7 @@
     gesture = null;
     lastTap = null;
     cancelAnimationFrame(glide);
+    handling(false);
     $('reader-view').classList.remove('is-grabbing');
     $('grip').classList.remove('at-corner');
   }
@@ -680,6 +691,7 @@
       gesture.two = true;
     }
     $('grip').classList.remove('is-easing');
+    handling(true);
     regrip();
   }
 
@@ -727,16 +739,18 @@
     if (!fingers[e.pointerId]) return;
     delete fingers[e.pointerId];
     if (fingerIds().length) { regrip(); return; } // one finger lifted: carry on with the other
-    var g = gesture;
+    var g = gesture, gliding = false;
     gesture = null;
     $('reader-view').classList.remove('is-grabbing');
-    if (e.type !== 'pointerup' || g.two) return;
-    if (!g.moved) {
-      if (e.timeStamp - g.at < 500) tapped(e);
-    } else if (g.mode === 'move') {
-      var v = speed(g.trail, e.timeStamp);
-      if (!flicked(g, e, v) && isCloser()) coast(v);
+    if (e.type === 'pointerup' && !g.two) {
+      if (!g.moved) {
+        if (e.timeStamp - g.at < 500) tapped(e);
+      } else if (g.mode === 'move') {
+        var v = speed(g.trail, e.timeStamp);
+        if (!flicked(g, e, v) && isCloser()) gliding = coast(v);
+      }
     }
+    if (!gliding) handling(false);
   }
 
   function tapped(e) {
@@ -772,9 +786,9 @@
     return true;
   }
 
-  // Looking closer, it glides on a little after a drag, as a page scrolls.
+  // Looking closer, it glides on a little after a drag, as a page scrolls. Says whether it does.
   function coast(v) {
-    if (reduceMotion || Math.hypot(v.x, v.y) < 0.2) return;
+    if (reduceMotion || Math.hypot(v.x, v.y) < 0.2) return false;
     var last = performance.now();
     var step = function (now) {
       var dt = Math.min(32, now - last), x = pose.x, y = pose.y, k = Math.pow(0.94, dt / 16);
@@ -784,17 +798,23 @@
       hold(false);
       v = { x: v.x * k, y: v.y * k };
       if (Math.hypot(v.x, v.y) > 0.02 && (!dt || pose.x !== x || pose.y !== y)) glide = requestAnimationFrame(step);
+      else handling(false);
     };
     glide = requestAnimationFrame(step);
+    return true;
   }
 
   /* The scroll wheel, or two fingers on a trackpad: scrolling reads down a thing
      bigger than the view, Ctrl + scroll zooms (a trackpad pinch arrives as that),
      and Shift + scroll rotates. */
+  var wheelStill = 0;
   function wheel(e) {
     if (!holding) return;
     e.preventDefault();
     cancelAnimationFrame(glide);
+    handling(true);
+    clearTimeout(wheelStill);
+    wheelStill = setTimeout(function () { handling(false); }, 200);
     var unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? fit.vh : 1;
     var dx = e.deltaX * unit, dy = e.deltaY * unit, m = viewMiddle();
     if (e.ctrlKey) {
@@ -816,6 +836,7 @@
     view.addEventListener('gesturestart', function (e) {
       e.preventDefault();
       from = fingerIds().length ? null : { x: pose.x, y: pose.y, a: pose.a, s: pose.s };
+      if (from) handling(true);
     });
     view.addEventListener('gesturechange', function (e) {
       e.preventDefault();
@@ -825,7 +846,11 @@
       zoomAbout(from.s * e.scale, e.clientX - m.x, e.clientY - m.y);
       hold(false);
     });
-    view.addEventListener('gestureend', function (e) { e.preventDefault(); from = null; });
+    view.addEventListener('gestureend', function (e) {
+      e.preventDefault();
+      if (from) handling(false);
+      from = null;
+    });
   }
 
   /* Keys in hand: F turns it over, R and Shift+R rotate it, + and - zoom, 0 puts
