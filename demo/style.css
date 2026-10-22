@@ -380,7 +380,7 @@ img { display: block; max-width: 100%; }
   to   { opacity: 1; transform: translate(-50%, -50%) rotate(var(--r, 0deg)); }
 }
 
-/* ---------- In hand: turning over, leafing through, looking closer ---------- */
+/* ---------- In hand: moving, rotating, looking closer, turning over, leafing through ---------- */
 
 .reader {
   position: fixed;
@@ -450,26 +450,39 @@ img { display: block; max-width: 100%; }
 }
 .reader__x:hover { background: rgba(232,226,210,0.08); }
 
+/* The game handles every touch here itself: moving, rotating, zooming. */
 .reader__view {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: grid;
   place-items: center;
   overflow: hidden;
+  touch-action: none;
+}
+
+/* How the thing is held: game.js moves, rotates and zooms it. Turning it over
+   happens inside, on the hand, around the thing's own middle. */
+.grip {
   perspective: 1800px;
+  cursor: grab;
+  -webkit-tap-highlight-color: transparent;
 }
-.reader__view.is-zoomed {
-  place-items: start center;
-  overflow: auto;
+.grip.is-easing { transition: transform 260ms cubic-bezier(.2,.8,.25,1); }
+/* While it's being handled it's moved as a picture, not drawn afresh at every
+   size: redrawing a big image with its shadow made pinching crawl on phones.
+   Let go, it's drawn once, sharply, at its new size. */
+.grip.is-handling { will-change: transform; }
+.grip.at-corner {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke='%23000' stroke-width='4.5'%3E%3Cpath d='M20 12a8 8 0 1 1-8-8c2.2 0 4.4.9 6 2.4L20 8.5'/%3E%3Cpath d='M20 3.5v5h-5'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-width='2'%3E%3Cpath d='M20 12a8 8 0 1 1-8-8c2.2 0 4.4.9 6 2.4L20 8.5'/%3E%3Cpath d='M20 3.5v5h-5'/%3E%3C/g%3E%3C/svg%3E") 12 12, alias;
 }
+.reader__view.is-grabbing,
+.reader__view.is-grabbing .grip { cursor: grabbing; }
 
 /* The thing in hand. game.js sets its width and height to fit the view.
    The shadow sits on each image: a filter here would flatten the 3D turns. */
 .hand {
   position: relative;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: pan-y pinch-zoom;
   transform-style: preserve-3d;
 }
 .hand img {
@@ -478,12 +491,14 @@ img { display: block; max-width: 100%; }
   height: 100%;
   object-fit: contain;
   user-select: none;
+  -webkit-user-select: none;
   -webkit-user-drag: none;
+  -webkit-touch-callout: none;
   filter: drop-shadow(0 26px 30px rgba(0,0,0,0.6));
 }
 
-.hand--flip { transform-style: preserve-3d; transition: transform 650ms cubic-bezier(.3,.7,.2,1); }
-.hand--flip.is-turned { transform: rotateY(180deg); }
+/* --spin adds up half a turn at a time, in whichever direction it was flicked. */
+.hand--flip { transform-style: preserve-3d; transform: rotateY(var(--spin, 0deg)); transition: transform 650ms cubic-bezier(.3,.7,.2,1); }
 .face {
   position: absolute;
   inset: 0;
@@ -521,6 +536,29 @@ img { display: block; max-width: 100%; }
   from { transform: translateY(22%) scale(0.8); opacity: 0; }
   to   { transform: none; opacity: 1; }
 }
+
+/* Shown once the thing is tilted, moved or held further away. It floats over
+   the view, so it never changes the room the thing has. */
+.reader__straight {
+  position: absolute;
+  top: 0.5rem;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  width: max-content;
+  margin-inline: auto;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid rgba(232,226,210,0.25);
+  border-radius: 999px;
+  background: rgba(12,20,15,0.86);
+  color: var(--chalk);
+  font-size: 0.8125rem;
+  box-shadow: 0 8px 18px -8px rgba(0,0,0,0.7);
+}
+.reader__straight:hover { background: rgba(28,40,32,0.92); }
+
+/* The same width saying "Look closer" or "Step back", so the buttons never shift. */
+#reader-zoom { min-width: calc(11ch + 0.5rem); }
 
 .reader__page {
   min-height: 1.4em;

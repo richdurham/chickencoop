@@ -272,9 +272,8 @@
 
   // ---------- In hand ----------
 
-  var holding = null; // { item, kind: 'flip' | 'leaf' | 'single', pages, at, turned }
+  var holding = null; // { item, kind: 'flip' | 'leaf' | 'single', pages, at, turned, spin, toTop }
   var returnFocus = null;
-  var swipe = null;
 
   /* Two sides turn over; more pages, or the folder's contents, are leafed through.
      The kete and the envelope are held as they are, and reached into. */
@@ -317,13 +316,14 @@
     var item = itemById(id);
     if (!item) return;
     var h = handFor(item);
-    holding = { item: item, kind: h.kind, pages: h.pages, at: 0, turned: false };
+    holding = { item: item, kind: h.kind, pages: h.pages, at: 0, turned: false, spin: 0, toTop: false };
     if (!takenOut) returnFocus = document.activeElement;
 
     $('reader-title').textContent = item.label;
     renderCredit(item.credit);
     var hand = $('hand');
     hand.className = 'hand hand--' + h.kind;
+    hand.style.removeProperty('--spin');
     hand.textContent = '';
     if (takenOut && !reduceMotion) {
       hand.classList.add('is-emerging');
@@ -344,7 +344,10 @@
     $('reader-turn').textContent = 'Turn it over';
     $('reader-reach').textContent = item.reach || '';
     $('reader-reach').hidden = !stillInside(item).length;
-    zoom(false);
+    // Whatever is picked up starts straight and fitted to the view.
+    letGo();
+    pose = { x: 0, y: 0, a: 0, s: 1 };
+    hold(false);
 
     $('reader').hidden = false;
     document.body.style.overflow = 'hidden';
@@ -369,7 +372,7 @@
     fitHand();
   }
 
-  /* Size the thing in hand to fit the view, or the view's width when looking closer. */
+  /* Size the thing in hand to fit the view. Holding it moves, rotates and zooms it from there. */
   function fitHand() {
     if (!holding) return;
     var hand = $('hand'), view = $('reader-view');
@@ -379,15 +382,23 @@
     if (!img.naturalWidth) { img.addEventListener('load', fitHand, { once: true }); return; }
     var aspect = img.naturalWidth / img.naturalHeight;
     var vw = view.clientWidth, vh = view.clientHeight;
-    var w = view.classList.contains('is-zoomed') ? vw : Math.min(vw, vh * aspect);
-    hand.style.width = Math.floor(w) + 'px';
-    hand.style.height = Math.floor(w / aspect) + 'px';
+    var w = Math.floor(Math.min(vw, vh * aspect)), h = Math.floor(w / aspect);
+    hand.style.width = w + 'px';
+    hand.style.height = h + 'px';
+    fit = { w: w, h: h, vw: vw, vh: vh };
+    if (holding.toTop) { holding.toTop = false; toTopLeft(); hold(true); }
+    else hold();
   }
 
-  function flip() {
+  /* Half a turn each time. Turned back, it goes back the way it came, unless
+     it's flicked: dir is the way it was flicked, 1 to the right, -1 to the left. */
+  function flip(dir) {
     if (!holding || holding.kind !== 'flip') return;
     holding.turned = !holding.turned;
-    $('hand').classList.toggle('is-turned', holding.turned);
+    holding.spin += (dir || (holding.turned ? 1 : -1)) * 180;
+    var hand = $('hand');
+    hand.classList.toggle('is-turned', holding.turned);
+    hand.style.setProperty('--spin', holding.spin + 'deg');
     $('reader-turn').textContent = holding.turned ? 'Turn it back' : 'Turn it over';
     showAt();
   }
@@ -419,6 +430,7 @@
       fresh.addEventListener('animationend', function () { fresh.classList.remove('page--returning'); under.remove(); }, { once: true });
     }
     holding.at = to;
+    holding.toTop = isCloser(); // looking closer, reading carries on from the top of the next page
     showAt();
   }
 
@@ -467,32 +479,412 @@
     el.appendChild(a);
   }
 
-  /* Looking closer stays on while turning pages, so an article can be read through. */
-  function zoom(on) {
-    var view = $('reader-view');
-    view.classList.toggle('is-zoomed', on);
-    view.scrollTop = 0;
-    $('reader-zoom').textContent = on ? 'Step back' : 'Look closer';
-    $('reader-zoom').setAttribute('aria-pressed', String(on));
-    fitHand();
+  // ---------- Holding it: moving, rotating, zooming ----------
+
+  /* How the thing in hand is held: moved x, y pixels from the middle of the view,
+     rotated a degrees and zoomed to s times its fitted size. None of it is saved:
+     whatever is picked up starts straight and fitted. */
+  var pose = { x: 0, y: 0, a: 0, s: 1 };
+  var fit = { w: 0, h: 0, vw: 0, vh: 0 }; // the thing's fitted size, and the view's
+
+  function isCloser() { return pose.s > 1.01; }
+
+  // Looking closer fills the width of the view, and at least doubles the size.
+  function closerScale() { return fit.w ? Math.max(2, fit.vw / fit.w) : 2; }
+  function maxScale() { return Math.max(4, closerScale() * 2); }
+
+  // The same angle, between -180 and 180.
+  function unwound(a) { return ((a + 180) % 360 + 360) % 360 - 180; }
+
+  // Half the width and height of the box around it, as it's turned.
+  function halfBox() {
+    var r = pose.a * Math.PI / 180, c = Math.abs(Math.cos(r)), s = Math.abs(Math.sin(r));
+    return { w: pose.s * (fit.w * c + fit.h * s) / 2, h: pose.s * (fit.w * s + fit.h * c) / 2 };
   }
 
-  function toggleZoom() { zoom(!$('reader-view').classList.contains('is-zoomed')); }
+  // It can't be lost: a third of it stays in view, or it covers a third of the view.
+  function keepInView() {
+    var b = halfBox(), w = fit.vw / 2, h = fit.vh / 2;
+    var mx = b.w + w - Math.min(b.w, w) * 2 / 3, my = b.h + h - Math.min(b.h, h) * 2 / 3;
+    pose.x = clamp(pose.x, -mx, mx);
+    pose.y = clamp(pose.y, -my, my);
+  }
 
-  // Tapping the thing does the natural thing: turn it over, turn the page, or look closer.
-  // Taking something out of the kete or envelope is only ever the button, never a stray tap.
-  function tapHand(e) {
+  /* Show it as it's held. ease glides it there (for buttons and keys), false
+     moves it at once (for fingers and the mouse), and left out keeps either. */
+  function hold(ease) {
+    keepInView();
+    var grip = $('grip'), closer = isCloser(), straight = $('reader-straight');
+    if (ease !== undefined) grip.classList.toggle('is-easing', ease);
+    grip.style.transform = 'translate(' + pose.x + 'px, ' + pose.y + 'px) rotate(' + pose.a + 'deg) scale(' + pose.s + ')';
+    // The buttons change only now and then; leaving them be keeps a drag light.
+    var zoomBtn = $('reader-zoom'), label = closer ? 'Step back' : 'Look closer';
+    if (zoomBtn.textContent !== label) {
+      $('reader-view').classList.toggle('is-zoomed', closer);
+      zoomBtn.textContent = label;
+      zoomBtn.setAttribute('aria-pressed', String(closer));
+    }
+    var hide = Math.abs(unwound(pose.a)) < 0.5 &&
+      (closer || (Math.abs(pose.s - 1) < 0.01 && Math.abs(pose.x) + Math.abs(pose.y) < 2));
+    if (straight.hidden !== hide) {
+      var wasFocused = document.activeElement === straight;
+      straight.hidden = hide;
+      if (hide && wasFocused) zoomBtn.focus();
+    }
+  }
+
+  // Held in the fingers (or gliding, or under the scroll wheel): see .grip.is-handling.
+  function handling(on) { $('grip').classList.toggle('is-handling', on); }
+
+  /* Before gliding to a new angle, take any whole turns off the old one (it looks
+     the same), so the glide goes the short way round. */
+  function unwind() {
+    if (unwound(pose.a) === pose.a) return;
+    pose.a = unwound(pose.a);
+    hold(false);
+    void $('grip').offsetWidth;
+  }
+
+  // Zoom to s, keeping the point px, py (from the middle of the view) where it is.
+  function zoomAbout(s, px, py) {
+    s = clamp(s, 0.5, maxScale());
+    var k = s / pose.s;
+    pose.x = px - (px - pose.x) * k;
+    pose.y = py - (py - pose.y) * k;
+    pose.s = s;
+  }
+
+  // Its top left corner in view: where reading starts.
+  function toTopLeft() {
+    var b = halfBox();
+    pose.x = Math.max(0, b.w - fit.vw / 2);
+    pose.y = Math.max(0, b.h - fit.vh / 2);
+  }
+
+  /* Looking closer: straight, the width of the view (or twice the size), from the
+     top. It stays on while turning pages, so an article can be read through. */
+  function lookCloser() {
+    unwind();
+    pose.a = 0;
+    pose.s = closerScale();
+    toTopLeft();
+    hold(true);
+  }
+
+  function stepBack() {
+    unwind();
+    pose.x = pose.y = 0;
+    pose.s = 1;
+    hold(true);
+  }
+
+  function toggleZoom() { if (isCloser()) stepBack(); else lookCloser(); }
+  function zoomBy(f) { unwind(); zoomAbout(pose.s * f, 0, 0); hold(true); }
+  function turnBy(deg) { unwind(); pose.a += deg; hold(true); }
+  function moveBy(dx, dy) { pose.x += dx; pose.y += dy; hold(true); }
+
+  /* Put it straight. Looking closer, it turns about the middle of the view, so
+     what was being read stays in view. Otherwise it goes back as it was picked up. */
+  function putStraight() {
+    unwind();
+    if (isCloser()) {
+      var r = -pose.a * Math.PI / 180, c = Math.cos(r), s = Math.sin(r), x = pose.x;
+      pose.x = x * c - pose.y * s;
+      pose.y = x * s + pose.y * c;
+      pose.a = 0;
+    } else {
+      pose = { x: 0, y: 0, a: 0, s: 1 };
+    }
+    hold(true);
+  }
+
+  function viewMiddle() {
+    var r = $('reader-view').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  // A point on the screen in the thing's own terms: from its middle, as if straight and fitted.
+  function onThing(cx, cy) {
+    var m = viewMiddle(), dx = cx - m.x - pose.x, dy = cy - m.y - pose.y;
+    var r = -pose.a * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+    return { x: (dx * c - dy * s) / pose.s, y: (dx * s + dy * c) / pose.s };
+  }
+
+  // Near a corner, the mouse rotates it rather than moving it. Fingers twist instead.
+  function atCorner(e) {
+    if (e.pointerType === 'touch' || !fit.w) return false;
+    var p = onThing(e.clientX, e.clientY), z = clamp(Math.min(fit.w, fit.h) * pose.s * 0.18, 22, 56) / pose.s;
+    return Math.abs(p.x) > fit.w / 2 - z && Math.abs(p.y) > fit.h / 2 - z;
+  }
+
+  /* A double-tap turns it over, or turns the page (on its left side, back a page).
+     Something solid is looked at closer, there, or stepped back from. Taking
+     something out of the kete or envelope is only ever the button, never a tap. */
+  function doubleTap(cx, cy) {
     if (!holding) return;
     if (holding.kind === 'flip') flip();
-    else if (holding.kind === 'leaf') {
-      var r = $('hand').getBoundingClientRect();
-      leaf(e.clientX - r.left < r.width * 0.35 ? -1 : 1);
-    } else toggleZoom();
+    else if (holding.kind === 'leaf') leaf(onThing(cx, cy).x < -fit.w * 0.15 ? -1 : 1);
+    else if (isCloser()) stepBack();
+    else {
+      var m = viewMiddle();
+      unwind();
+      zoomAbout(closerScale(), cx - m.x, cy - m.y);
+      hold(true);
+    }
+  }
+
+  /* Handling it. One finger, or the mouse, moves it; the mouse by a corner
+     rotates it; two fingers move, rotate and zoom it together. A quick sideways
+     flick turns it over or turns the page, and so does a double-tap. A single
+     tap does nothing: it's where a drag starts. */
+  var fingers = {};    // pointers down, by id: { x, y }
+  var gesture = null;  // the one under way
+  var lastTap = null;  // { t, x, y }
+  var glide = 0;       // while it glides on after being let go
+
+  function letGo() {
+    fingers = {};
+    gesture = null;
+    lastTap = null;
+    cancelAnimationFrame(glide);
+    handling(false);
+    $('reader-view').classList.remove('is-grabbing');
+    $('grip').classList.remove('at-corner');
+  }
+
+  function fingerIds() { return Object.keys(fingers); }
+
+  // The change in an angle, the short way round.
+  function turnStep(d) { return d > Math.PI ? d - 2 * Math.PI : d < -Math.PI ? d + 2 * Math.PI : d; }
+
+  // Start again from how it's held now: when it's touched, and when a finger is added or lifted.
+  function regrip() {
+    var g = gesture, ids = fingerIds(), m = viewMiddle(), p = fingers[ids[0]], q = fingers[ids[1]];
+    g.from = { x: pose.x, y: pose.y, a: pose.a, s: pose.s };
+    g.turned = 0;
+    if (q) {
+      g.mode = 'two';
+      g.c = { x: (p.x + q.x) / 2 - m.x, y: (p.y + q.y) / 2 - m.y };
+      g.d = Math.max(1, Math.hypot(q.x - p.x, q.y - p.y));
+      g.t = Math.atan2(q.y - p.y, q.x - p.x);
+    } else {
+      if (g.mode === 'two') g.mode = 'move';
+      g.p = { x: p.x, y: p.y };
+      g.t = Math.atan2(p.y - m.y - pose.y, p.x - m.x - pose.x);
+    }
+  }
+
+  function grab(e) {
+    if (!holding || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    var n = fingerIds().length;
+    // It's picked up by the thing itself; a second finger can go anywhere in the view.
+    if (n >= 2 || e.target.closest('button') || (!n && !e.target.closest('#grip'))) return;
+    e.preventDefault();
+    $('reader-view').setPointerCapture(e.pointerId);
+    cancelAnimationFrame(glide);
+    fingers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    if (!n) {
+      gesture = { mode: atCorner(e) ? 'turn' : 'move', moved: false, two: false, at: e.timeStamp,
+        start: { x: e.clientX, y: e.clientY }, home: { x: pose.x, y: pose.y },
+        trail: [{ t: e.timeStamp, x: e.clientX, y: e.clientY }] };
+    } else {
+      gesture.two = true;
+    }
+    $('grip').classList.remove('is-easing');
+    handling(true);
+    regrip();
+  }
+
+  function drag(e) {
+    if (!fingers[e.pointerId]) {
+      // Hovering: by a corner, the pointer shows it will rotate.
+      if (e.pointerType === 'mouse' && !gesture) $('grip').classList.toggle('at-corner', !!e.target.closest('#grip') && atCorner(e));
+      return;
+    }
+    fingers[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var g = gesture, m = viewMiddle(), t;
+    if (g.mode === 'two') {
+      var ids = fingerIds(), p = fingers[ids[0]], q = fingers[ids[1]];
+      t = Math.atan2(q.y - p.y, q.x - p.x);
+      g.turned += turnStep(t - g.t);
+      g.t = t;
+      var s = clamp(g.from.s * Math.hypot(q.x - p.x, q.y - p.y) / g.d, 0.5, maxScale());
+      var k = s / g.from.s, c = Math.cos(g.turned), sn = Math.sin(g.turned);
+      var dx = (g.from.x - g.c.x) * k, dy = (g.from.y - g.c.y) * k;
+      pose.x = (p.x + q.x) / 2 - m.x + dx * c - dy * sn;
+      pose.y = (p.y + q.y) / 2 - m.y + dx * sn + dy * c;
+      pose.a = g.from.a + g.turned * 180 / Math.PI;
+      pose.s = s;
+      g.moved = true;
+    } else {
+      if (!g.moved && Math.abs(e.clientX - g.start.x) + Math.abs(e.clientY - g.start.y) < 8) return;
+      g.moved = true;
+      if (g.mode === 'turn') {
+        t = Math.atan2(e.clientY - m.y - pose.y, e.clientX - m.x - pose.x);
+        g.turned += turnStep(t - g.t);
+        g.t = t;
+        pose.a = g.from.a + g.turned * 180 / Math.PI;
+      } else {
+        $('reader-view').classList.add('is-grabbing');
+        pose.x = g.from.x + e.clientX - g.p.x;
+        pose.y = g.from.y + e.clientY - g.p.y;
+        g.trail.push({ t: e.timeStamp, x: e.clientX, y: e.clientY });
+        if (g.trail.length > 20) g.trail.shift();
+      }
+    }
+    hold(false);
+  }
+
+  function release(e) {
+    if (!fingers[e.pointerId]) return;
+    delete fingers[e.pointerId];
+    if (fingerIds().length) { regrip(); return; } // one finger lifted: carry on with the other
+    var g = gesture, gliding = false;
+    gesture = null;
+    $('reader-view').classList.remove('is-grabbing');
+    if (e.type === 'pointerup' && !g.two) {
+      if (!g.moved) {
+        if (e.timeStamp - g.at < 500) tapped(e);
+      } else if (g.mode === 'move') {
+        var v = speed(g.trail, e.timeStamp);
+        if (!flicked(g, e, v) && isCloser()) gliding = coast(v);
+      }
+    }
+    if (!gliding) handling(false);
+  }
+
+  function tapped(e) {
+    var t = e.timeStamp;
+    if (lastTap && t - lastTap.t < 350 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) {
+      lastTap = null;
+      doubleTap(e.clientX, e.clientY);
+    } else {
+      lastTap = { t: t, x: e.clientX, y: e.clientY };
+    }
+  }
+
+  // How fast it was moving as it was let go, in pixels a millisecond, over the last tenth of a second.
+  function speed(trail, now) {
+    var recent = trail.filter(function (p) { return now - p.t < 100; });
+    if (!recent.length) return { x: 0, y: 0 };
+    var a = recent[0], b = trail[trail.length - 1], dt = Math.max(8, now - a.t);
+    return { x: (b.x - a.x) / dt, y: (b.y - a.y) / dt };
+  }
+
+  /* A flick: let go while moving fast sideways, not far from where it started.
+     It springs back and turns over, or turns the page. Not while it's wider than
+     the view, where a quick drag is reading. */
+  function flicked(g, e, v) {
+    if (holding.kind === 'single') return false;
+    if (Math.abs(v.x) < 0.5 || Math.abs(v.x) < Math.abs(v.y) * 2) return false;
+    if (Math.abs(e.clientX - g.start.x) > 160 || halfBox().w * 2 > fit.vw + 1) return false;
+    pose.x = g.home.x;
+    pose.y = g.home.y;
+    hold(true);
+    if (holding.kind === 'flip') flip(v.x > 0 ? 1 : -1);
+    else leaf(v.x < 0 ? 1 : -1);
+    return true;
+  }
+
+  // Looking closer, it glides on a little after a drag, as a page scrolls. Says whether it does.
+  function coast(v) {
+    if (reduceMotion || Math.hypot(v.x, v.y) < 0.2) return false;
+    var last = performance.now();
+    var step = function (now) {
+      var dt = Math.min(32, now - last), x = pose.x, y = pose.y, k = Math.pow(0.94, dt / 16);
+      last = now;
+      pose.x += v.x * dt;
+      pose.y += v.y * dt;
+      hold(false);
+      v = { x: v.x * k, y: v.y * k };
+      if (Math.hypot(v.x, v.y) > 0.02 && (!dt || pose.x !== x || pose.y !== y)) glide = requestAnimationFrame(step);
+      else handling(false);
+    };
+    glide = requestAnimationFrame(step);
+    return true;
+  }
+
+  /* The scroll wheel, or two fingers on a trackpad: scrolling reads down a thing
+     bigger than the view, Ctrl + scroll zooms (a trackpad pinch arrives as that),
+     and Shift + scroll rotates. */
+  var wheelStill = 0;
+  function wheel(e) {
+    if (!holding) return;
+    e.preventDefault();
+    cancelAnimationFrame(glide);
+    handling(true);
+    clearTimeout(wheelStill);
+    wheelStill = setTimeout(function () { handling(false); }, 200);
+    var unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? fit.vh : 1;
+    var dx = e.deltaX * unit, dy = e.deltaY * unit, m = viewMiddle();
+    if (e.ctrlKey) {
+      zoomAbout(pose.s * Math.exp(-clamp(dy, -40, 40) * 0.008), e.clientX - m.x, e.clientY - m.y);
+    } else if (e.shiftKey) {
+      pose.a += clamp(dy || dx, -100, 100) * 0.15; // some browsers send Shift + scroll sideways
+    } else {
+      var b = halfBox();
+      if (b.w * 2 > fit.vw + 1) pose.x -= dx;
+      if (b.h * 2 > fit.vh + 1) pose.y -= dy;
+    }
+    hold(false);
+  }
+
+  /* Safari on a Mac sends a trackpad pinch or twist as gesture events. (On phones
+     they come with touches, which are handled already.) */
+  function bindTrackpad(view) {
+    var from = null;
+    view.addEventListener('gesturestart', function (e) {
+      e.preventDefault();
+      from = fingerIds().length ? null : { x: pose.x, y: pose.y, a: pose.a, s: pose.s };
+      if (from) handling(true);
+    });
+    view.addEventListener('gesturechange', function (e) {
+      e.preventDefault();
+      if (!from || fingerIds().length) return;
+      var m = viewMiddle();
+      pose = { x: from.x, y: from.y, a: from.a + e.rotation, s: from.s };
+      zoomAbout(from.s * e.scale, e.clientX - m.x, e.clientY - m.y);
+      hold(false);
+    });
+    view.addEventListener('gestureend', function (e) {
+      e.preventDefault();
+      if (from) handling(false);
+      from = null;
+    });
+  }
+
+  /* Keys in hand: F turns it over, R and Shift+R rotate it, + and - zoom, 0 puts
+     it straight, Page Up and Page Down turn pages. The arrows turn it over or turn
+     the page, as they always have, except while looking closer, when they move it. */
+  function handKey(e) {
+    if (!holding || e.ctrlKey || e.metaKey || e.altKey) return false;
+    var step = e.shiftKey ? 160 : 40, closer = isCloser();
+    switch (e.key) {
+      case 'ArrowLeft': case 'ArrowRight':
+        var left = e.key === 'ArrowLeft';
+        if (closer) moveBy(left ? step : -step, 0);
+        else if (holding.kind === 'leaf') leaf(left ? -1 : 1);
+        else if (holding.kind === 'flip') flip();
+        else return false;
+        return true;
+      case 'ArrowUp': case 'ArrowDown':
+        if (!closer) return false;
+        moveBy(0, e.key === 'ArrowUp' ? step : -step);
+        return true;
+      case 'PageUp': case 'PageDown': leaf(e.key === 'PageUp' ? -1 : 1); return true;
+      case 'f': case 'F': flip(); return true;
+      case 'r': case 'R': turnBy(e.shiftKey ? -15 : 15); return true;
+      case '+': case '=': zoomBy(1.25); return true;
+      case '-': case '_': zoomBy(0.8); return true;
+      case '0': putStraight(); return true;
+    }
+    return false;
   }
 
   function closeReader() {
     if ($('reader').hidden) return;
     $('reader').hidden = true;
+    letGo();
     $('hand').textContent = '';
     document.body.style.overflow = '';
     var id = holding && holding.item.id;
@@ -1095,31 +1487,25 @@
     });
     $('reader-prev').addEventListener('click', function () { leaf(-1); });
     $('reader-next').addEventListener('click', function () { leaf(1); });
-    $('reader-turn').addEventListener('click', flip);
+    $('reader-turn').addEventListener('click', function () { flip(); });
     $('reader-zoom').addEventListener('click', toggleZoom);
+    $('reader-straight').addEventListener('click', putStraight);
     $('reader-reach').addEventListener('click', reachIn);
 
-    // Tap the thing in hand, or swipe across it to turn the page.
-    var hand = $('hand');
-    hand.addEventListener('pointerdown', function (e) { swipe = { x: e.clientX, y: e.clientY }; });
-    hand.addEventListener('pointerup', function (e) {
-      if (!swipe) return;
-      var dx = e.clientX - swipe.x, dy = e.clientY - swipe.y;
-      swipe = null;
-      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5 && holding && holding.kind !== 'single') {
-        if (holding.kind === 'leaf') leaf(dx < 0 ? 1 : -1); else flip();
-      } else if (Math.abs(dx) + Math.abs(dy) < 10) {
-        tapHand(e);
-      }
-    });
+    // Handling the thing in hand: fingers, the mouse, the scroll wheel and a trackpad.
+    var view = $('reader-view');
+    view.addEventListener('pointerdown', grab);
+    view.addEventListener('pointermove', drag);
+    view.addEventListener('pointerup', release);
+    view.addEventListener('pointercancel', release);
+    view.addEventListener('pointerleave', function () { if (!gesture) $('grip').classList.remove('at-corner'); });
+    view.addEventListener('wheel', wheel, { passive: false });
+    bindTrackpad(view);
 
     document.addEventListener('keydown', function (e) {
       if ($('reader').hidden) return;
       if (e.key === 'Escape') closeReader();
-      else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-        if (holding && holding.kind === 'leaf') leaf(e.key === 'ArrowRight' ? 1 : -1);
-        else if (holding && holding.kind === 'flip') flip();
-      }
+      else if (handKey(e)) e.preventDefault();
       trapFocus(e);
     });
 

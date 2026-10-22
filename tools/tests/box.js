@@ -1,4 +1,5 @@
-// The box: the pile, picking things up, turning over, leafing, the kete and envelope, saving, phones.
+// The box: the pile, picking things up, handling them in hand (moving, rotating, zooming, flicking,
+// double-tapping, keys), turning over, leafing, the kete and envelope, saving, phones.
 // Usage: node tools/tests/box.js <screenshot-dir> [site address, default http://127.0.0.1:8765/demo/]
 // Serve the repo first: python3 -m http.server 8765 --bind 127.0.0.1 (from the repo's root).
 const { chromium } = require('playwright');
@@ -52,6 +53,43 @@ async function hidden(page, id) {
     return true;
   }, id);
 }
+// How the thing in hand is held, from its grip: moved x, y, rotated a degrees, zoomed s times.
+async function pose(page) {
+  return page.$eval('#grip', g => {
+    const m = g.style.transform.match(/translate\(([-\d.e]+)px, ([-\d.e]+)px\) rotate\(([-\d.e]+)deg\) scale\(([-\d.e]+)\)/);
+    return m ? { x: +m[1], y: +m[2], a: +m[3], s: +m[4] } : null;
+  });
+}
+const within = (a, b, by) => Math.abs(a - b) <= by;
+const isStraight = p => p && within(p.x, 0, 1) && within(p.y, 0, 1) && within(p.a, 0, 0.5) && within(p.s, 1, 0.01);
+async function handBox(page) {
+  return page.$eval('#hand', h => { const r = h.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, left: r.left, right: r.right, top: r.top, w: r.width }; });
+}
+async function zoomedIn(page) { return page.$eval('#reader-view', v => v.classList.contains('is-zoomed')); }
+// A drag that stops before it's let go, so it can't be a flick.
+async function slowDrag(page, from, dx, dy) {
+  await page.mouse.move(from.x, from.y); await page.mouse.down();
+  for (let i = 1; i <= 6; i++) { await page.mouse.move(from.x + dx * i / 6, from.y + dy * i / 6); await page.waitForTimeout(30); }
+  await page.waitForTimeout(150);
+  await page.mouse.up();
+}
+async function flick(page, from, dx) {
+  await page.mouse.move(from.x, from.y); await page.mouse.down();
+  await page.mouse.move(from.x + dx / 2, from.y); await page.mouse.move(from.x + dx, from.y);
+  await page.mouse.up();
+}
+// Taps far enough apart not to make a double-tap.
+async function dblclickAt(page, x, y) { await page.waitForTimeout(400); await page.mouse.dblclick(x, y); }
+// Fingers on a phone screen, moved together from one place to another (Playwright's touchscreen only taps).
+async function fingers(page, from, to) {
+  const cdp = await page.context().newCDPSession(page);
+  const at = k => from.map((p, i) => ({ x: p.x + (to[i].x - p.x) * k, y: p.y + (to[i].y - p.y) * k, id: i + 1 }));
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: at(0) });
+  for (let s = 1; s <= 8; s++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: at(s / 8) }); await page.waitForTimeout(16); }
+  await page.waitForTimeout(150);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await cdp.detach();
+}
 async function say(page, text) {
   const before = await page.$$eval('.msg--her', els => els.length);
   await page.fill('#ask-input', text);
@@ -99,6 +137,71 @@ async function say(page, text) {
   check(await page.isHidden('#reader'), 'Escape puts it back');
   check(await page.evaluate(() => document.activeElement && document.activeElement.dataset.item === 'summer-school'), 'focus returns to the photo on the table');
 
+  // Handling it: moving, flicking, double-clicking, rotating and zooming.
+  await pickUp(page, 'summer-school');
+  check(isStraight(await pose(page)) && await page.isHidden('#reader-straight'), 'it’s picked up straight and fitted, with nothing to put straight');
+  let c = await handBox(page);
+  await page.click('#hand');
+  await page.waitForTimeout(400);
+  check((await page.textContent('#reader-page')) === 'Front' && isStraight(await pose(page)), 'a single click on it does nothing');
+  await slowDrag(page, c, 120, 60);
+  { const p = await pose(page); check(within(p.x, 120, 2) && within(p.y, 60, 2) && (await page.textContent('#reader-page')) === 'Front', `dragging it moves it, and a slow drag doesn’t turn it over (${Math.round(p.x)}, ${Math.round(p.y)})`); }
+  check(await page.isVisible('#reader-straight'), 'once it’s moved, it can be put straight');
+  await page.click('#reader-straight');
+  check(isStraight(await pose(page)) && await page.isHidden('#reader-straight'), '“Put it straight” puts it back as it was picked up');
+  await flick(page, c, -80);
+  check((await page.textContent('#reader-page')) === 'Back' && isStraight(await pose(page)), 'a quick flick turns it over, and it springs back to where it was');
+  await dblclickAt(page, c.x, c.y);
+  check((await page.textContent('#reader-page')) === 'Front', 'double-clicking turns it back');
+  // By a corner, the mouse rotates it.
+  { const b = await handBox(page), r = await page.$eval('#hand', h => { const r = h.getBoundingClientRect(); return { x: r.right - 6, y: r.top + 6 }; });
+    await page.mouse.move(c.x, c.y);
+    await page.mouse.move(r.x, r.y);
+    check(await page.$eval('#grip', g => g.classList.contains('at-corner')), 'by a corner, the pointer shows it will rotate');
+    const t0 = Math.atan2(r.y - b.y, r.x - b.x), R = Math.hypot(r.x - b.x, r.y - b.y);
+    await page.mouse.down();
+    for (let i = 1; i <= 6; i++) { const t = t0 + (Math.PI / 6) * i / 6; await page.mouse.move(b.x + R * Math.cos(t), b.y + R * Math.sin(t)); }
+    await page.mouse.up();
+    const p = await pose(page);
+    check(within(p.a, 30, 2) && within(p.x, 0, 1) && within(p.y, 0, 1) && (await page.textContent('#reader-page')) === 'Front', `dragging a corner rotates it, without moving or turning it over (${p.a.toFixed(1)}°)`);
+  }
+  await page.keyboard.press('0');
+  check(isStraight(await pose(page)), '0 puts it straight');
+  await page.mouse.move(c.x, c.y);
+  await page.keyboard.down('Shift'); await page.mouse.wheel(0, 100); await page.keyboard.up('Shift');
+  check(within((await pose(page)).a, 15, 0.5), 'Shift + scroll rotates it');
+  await page.keyboard.press('r');
+  const turnedR = (await pose(page)).a;
+  await page.keyboard.press('Shift+R'); await page.keyboard.press('Shift+R');
+  check(within(turnedR, 30, 0.5) && within((await pose(page)).a, 0, 0.5), 'R rotates it one way, Shift+R the other');
+  await page.keyboard.press('f');
+  check((await page.textContent('#reader-page')) === 'Back', 'F turns it over');
+  await page.keyboard.press('f');
+  await page.keyboard.down('Control'); await page.mouse.wheel(0, -100); await page.keyboard.up('Control');
+  check((await pose(page)).s > 1.2 && await zoomedIn(page) && (await page.textContent('#reader-zoom')) === 'Step back', 'Ctrl + scroll zooms in (as a trackpad pinch does)');
+  await page.keyboard.press('-'); await page.keyboard.press('-');
+  check((await pose(page)).s < 1 && !(await zoomedIn(page)) && await page.isVisible('#reader-straight'), 'minus zooms out, and held further away it can be put straight');
+  await page.keyboard.press('0');
+  check(isStraight(await pose(page)), 'and 0 puts it back as it was picked up');
+  await page.keyboard.press('+');
+  check(within((await pose(page)).s, 1.25, 0.01) && await zoomedIn(page), 'plus zooms in');
+  await page.click('#reader-zoom');
+  check(isStraight(await pose(page)) && (await page.textContent('#reader-zoom')) === 'Look closer', '“Step back” goes back to its fitted size');
+  // Looking closer, the arrows and the scroll wheel move it rather than turning it over.
+  await page.click('#reader-zoom');
+  { const p0 = await pose(page);
+    await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowRight');
+    const p1 = await pose(page);
+    check(within(p1.y, p0.y - 40, 1) && within(p1.x, p0.x - 40, 1) && (await page.textContent('#reader-page')) === 'Front', 'while looking closer, the arrow keys move it instead of turning it over');
+    await page.mouse.move(c.x, c.y); await page.mouse.wheel(0, 100);
+    check(within((await pose(page)).y, p1.y - 100, 1), 'and scrolling reads down it');
+  }
+  await page.keyboard.press('r');
+  await page.click('#reader .reader__x');
+  await pickUp(page, 'summer-school');
+  check(isStraight(await pose(page)) && (await page.textContent('#reader-page')) === 'Front' && !(await zoomedIn(page)), 'picked up again, it’s straight, fitted and front up');
+  await page.keyboard.press('Escape');
+
   // Digging: the certificate starts underneath the folder, and moving the folder reveals it.
   check(await covered(page, 'certificate'), 'the certificate starts hidden under the folder');
   const before = await page.$eval('.thing[data-item="folder-cover"]', el => el.style.left + ' ' + el.style.top);
@@ -123,10 +226,13 @@ async function say(page, text) {
   check(!(await page.$('#reader-full')) && (await page.$$('#reader a')).length === 0, 'no link opens anything in a new tab');
   await page.screenshot({ path: OUT + '/t07-kete.png' });
   await page.click('#hand');
-  check((await page.textContent('#reader-title')) === 'Kete' && await page.$eval('#reader-view', v => v.classList.contains('is-zoomed')), 'clicking the kete in hand looks closer at it, rather than taking anything out');
+  await page.waitForTimeout(400);
+  check((await page.textContent('#reader-title')) === 'Kete' && !(await zoomedIn(page)) && !(await page.$('.thing[data-item="dog-tags"]')), 'a single click on the kete in hand does nothing');
+  { const k = await handBox(page); await dblclickAt(page, k.x, k.y); }
+  check((await page.textContent('#reader-title')) === 'Kete' && await zoomedIn(page), 'double-clicking the kete in hand looks closer at it, rather than taking anything out');
   check(!(await page.$('.thing[data-item="dog-tags"]')) && await page.isVisible('#reader-reach'), 'the dog tags are still inside');
-  await page.click('#hand');
-  check((await page.textContent('#reader-title')) === 'Kete' && !(await page.$eval('#reader-view', v => v.classList.contains('is-zoomed'))), 'clicking again steps back, still holding the kete');
+  { const k = await handBox(page); await dblclickAt(page, k.x, k.y); }
+  check((await page.textContent('#reader-title')) === 'Kete' && !(await zoomedIn(page)), 'double-clicking again steps back, still holding the kete');
   await page.click('#reader-reach');
   check((await page.textContent('#reader-title')) === 'Dog tags' && (await page.getAttribute('#hand img', 'src')) === 'box/cut/dog-tags.webp', 'reaching in takes out the dog tags and holds them');
   await page.waitForFunction(() => document.querySelector('#hand img').complete);
@@ -148,8 +254,8 @@ async function say(page, text) {
   await page.keyboard.press('Escape');
   await pickUp(page, 'kete');
   check(await page.isHidden('#reader-reach') && (await page.textContent('#reader-page')) === 'Nothing else inside', 'then the kete is empty');
-  await page.click('#hand');
-  check(await page.$eval('#reader-view', v => v.classList.contains('is-zoomed')), 'tapping the empty kete looks closer');
+  { const k = await handBox(page); await dblclickAt(page, k.x, k.y); }
+  check(await zoomedIn(page), 'double-clicking the empty kete looks closer');
   await page.keyboard.press('Escape');
 
   // The card is in the envelope.
@@ -171,11 +277,32 @@ async function say(page, text) {
   for (let i = 0; i < 15; i++) { await page.keyboard.press('ArrowRight'); labels.push(await page.textContent('#reader-page')); }
   check(labels.length === 16 && labels[15] === 'NOVA Online printout, page 4 of 4', 'all 16 pages of the folder can be leafed through');
   check(labels.includes('Business card') && labels.includes('CNN printout, page 3 of 4'), 'documents are named as you reach them');
+  // Leafing by hand: Page Up and Page Down, double-clicking either side, flicking.
+  await page.keyboard.press('PageUp');
+  check((await page.textContent('#reader-page')) === 'NOVA Online printout, page 3 of 4', 'Page Up turns back a page');
+  await page.keyboard.press('PageDown');
+  const pg = await handBox(page);
+  await dblclickAt(page, pg.left + pg.w * 0.1, pg.y);
+  const leftSide = await page.textContent('#reader-page');
+  await dblclickAt(page, pg.right - pg.w * 0.1, pg.y);
+  check(leftSide === 'NOVA Online printout, page 3 of 4' && (await page.textContent('#reader-page')) === 'NOVA Online printout, page 4 of 4', 'double-clicking the left side of a page turns back, the right side on');
+  await page.waitForTimeout(400);
+  await flick(page, pg, 80);
+  check((await page.textContent('#reader-page')) === 'NOVA Online printout, page 3 of 4' && isStraight(await pose(page)), 'flicking to the right turns back a page');
   await page.waitForFunction(() => [...document.querySelectorAll('#hand .page img')].every(i => i.complete && i.naturalWidth));
   await page.click('#reader-zoom');
-  const closer = await page.waitForFunction(() => { const v = document.getElementById('reader-view'); return v.classList.contains('is-zoomed') && v.scrollHeight > v.clientHeight; }, null, { timeout: 2000 }).then(() => true, () => false);
-  check(closer, 'looking closer lets a page be read at full width');
+  const closer = await page.waitForFunction(() => {
+    const v = document.getElementById('reader-view').getBoundingClientRect(), h = document.getElementById('hand').getBoundingClientRect();
+    return document.getElementById('reader-view').classList.contains('is-zoomed') && h.width >= v.width - 3 && Math.abs(h.left - v.left) < 3 && Math.abs(h.top - v.top) < 3 && h.height > v.height;
+  }, null, { timeout: 2000 }).then(() => true, () => false);
+  check(closer, 'looking closer shows a page across the view, from the top, to be read down');
   await page.screenshot({ path: OUT + '/t03-folder-closer.png' });
+  await page.mouse.move(pg.x, pg.y);
+  await page.mouse.wheel(0, 300);
+  const reading = await pose(page);
+  await page.keyboard.press('PageDown');
+  await page.waitForTimeout(300);
+  { const p = await pose(page); check((await page.textContent('#reader-page')) === 'NOVA Online printout, page 4 of 4' && await zoomedIn(page) && p.y > reading.y + 250, 'turning the page while looking closer starts the next page from the top'); }
   await page.click('#reader .reader__x');
   { const t = await page.textContent('#progress'); check(/^Looked at: (a few|some|many|most)$/.test(t), `how much has been looked at is a word, not a count ("${t}")`); }
   const seen = await page.evaluate(() => JSON.parse(localStorage.getItem('chickencoop-demo-v2')).opened);
@@ -206,10 +333,10 @@ async function say(page, text) {
     await page.keyboard.press('Escape');
   }
   check(solid.length === 5, 'the kete, the plant, the glasses, the mug and the lid don’t turn over: ' + solid.join(', '));
-  // A solid thing: look closer by tapping it.
+  // A solid thing: look closer by double-clicking it.
   await pickUp(page, 'mug');
-  await page.click('#hand');
-  check(await page.$eval('#reader-view', v => v.classList.contains('is-zoomed')), 'tapping a solid thing looks closer');
+  { const k = await handBox(page); await dblclickAt(page, k.x, k.y); }
+  check(await zoomedIn(page), 'double-clicking a solid thing looks closer');
   await page.click('#reader .reader__x');
 
   // Keyboard: move with arrows, pick up with Enter.
@@ -285,12 +412,41 @@ async function say(page, text) {
   await mp.waitForSelector('#reader:not([hidden])');
   check((await mp.textContent('#reader-title')) === 'Family photo', 'a tap picks a thing up on a phone');
   await mp.screenshot({ path: OUT + '/t06-phone-hand.png' });
+  // Handling it with fingers: a double-tap turns it over, one finger moves it, two twist and pinch it.
+  { const h = await handBox(mp);
+    await mp.waitForTimeout(400);
+    await mp.touchscreen.tap(h.x, h.y); await mp.touchscreen.tap(h.x, h.y);
+    check((await mp.textContent('#reader-page')) === 'Back', 'on a phone, a double-tap turns it over');
+    await fingers(mp, [{ x: h.x, y: h.y }], [{ x: h.x + 40, y: h.y + 80 }]);
+    const moved = await pose(mp);
+    check(within(moved.x, 40, 2) && within(moved.y, 80, 2) && (await mp.textContent('#reader-page')) === 'Back', `one finger moves it (${Math.round(moved.x)}, ${Math.round(moved.y)})`);
+    await mp.tap('#reader-straight');
+    const t = Math.PI / 6;
+    await fingers(mp, [{ x: h.x - 60, y: h.y }, { x: h.x + 60, y: h.y }],
+      [{ x: h.x - 90 * Math.cos(t), y: h.y - 90 * Math.sin(t) }, { x: h.x + 90 * Math.cos(t), y: h.y + 90 * Math.sin(t) }]);
+    const twisted = await pose(mp);
+    check(within(twisted.a, 30, 1) && within(twisted.s, 1.5, 0.02) && await zoomedIn(mp), `two fingers rotate it and pinch it bigger together (${twisted.a.toFixed(1)}°, ${twisted.s.toFixed(2)}×)`);
+    const fits = await mp.evaluate(() => {
+      const b = document.getElementById('reader-straight').getBoundingClientRect(), v = document.getElementById('reader-view').getBoundingClientRect();
+      const t = document.querySelector('.reader__head').getBoundingClientRect(), f = document.querySelector('.reader__foot').getBoundingClientRect();
+      return b.width > 0 && b.top >= v.top && b.bottom <= v.bottom && b.left >= 0 && b.right <= innerWidth && b.top >= t.bottom && f.bottom <= innerHeight;
+    });
+    check(fits, '“Put it straight” floats inside the view on a phone, clear of the title and the buttons');
+    await mp.screenshot({ path: OUT + '/t12-phone-twisted.png' });
+    await mp.tap('#reader-straight');
+    check(within((await pose(mp)).a, 0, 0.5) && await mp.isHidden('#reader-straight'), 'and “Put it straight” turns it straight again');
+  }
   await mp.tap('#reader .reader__x');
   { const p = await spot(mp, 'kete'); await mp.touchscreen.tap(p.x, p.y); }
   await mp.waitForSelector('#reader:not([hidden])');
   await mp.screenshot({ path: OUT + '/t10-phone-kete.png' });
-  { const r = await mp.$eval('#hand', h => { const b = h.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; }); await mp.touchscreen.tap(r.x, r.y); }
-  check((await mp.textContent('#reader-title')) === 'Kete' && await mp.$eval('#reader-view', v => v.classList.contains('is-zoomed')), 'on a phone, tapping the kete in hand looks closer, the dog tags stay inside');
+  { const r = await handBox(mp);
+    await mp.touchscreen.tap(r.x, r.y);
+    await mp.waitForTimeout(400);
+    check((await mp.textContent('#reader-title')) === 'Kete' && !(await zoomedIn(mp)), 'on a phone, a single tap on the kete in hand does nothing');
+    await mp.touchscreen.tap(r.x, r.y); await mp.touchscreen.tap(r.x, r.y);
+  }
+  check((await mp.textContent('#reader-title')) === 'Kete' && await zoomedIn(mp), 'on a phone, double-tapping the kete in hand looks closer, the dog tags stay inside');
   await mp.tap('#reader-reach');
   check((await mp.textContent('#reader-title')) === 'Dog tags', 'on a phone, Reach inside takes out the dog tags');
   const foot = await mp.evaluate(() => { const f = document.querySelector('.reader__foot').getBoundingClientRect(); return { right: f.right, bottom: f.bottom, vw: innerWidth, vh: innerHeight }; });

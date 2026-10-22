@@ -1,6 +1,6 @@
 # Handover: the browser demo of Open the Chicken Coop
 
-Written on 21 October 2026 for the next chat that works on this repo, and updated the same day once the real box turned out to be gone. It covers what the demo is, what the owner wants from it, how it is built, how to test a change, and what is queued next. Everything below is on `main` and live.
+Written on 21 October 2026 for the next chat that works on this repo, updated the same day once the real box turned out to be gone, and on 22 October 2026 once things could be handled in hand. It covers what the demo is, what the owner wants from it, how it is built, how to test a change, and what is queued next. Everything below is on `main` and live.
 
 - **Live demo:** https://richdurham.github.io/chickencoop/demo/ (GitHub Pages, deployed from `main`)
 - **Repo:** `richdurham/chickencoop`. The demo is in `demo/`, and tools and tests are in `tools/`.
@@ -68,7 +68,29 @@ The demo is a static site: plain HTML, CSS and JavaScript, no build step. Jekyll
 **What `demo/game.js` does:**
 - **Saving:** state is kept in `localStorage` under `chickencoop-demo-v2`. It holds `started`, `opened`, `log`, `ending`, `fallback`, `layout`, `handled` and `out`.
 - **The pile:** drag to move a thing, tap or Enter to pick it up, arrow keys to nudge.
-- **In hand:** turning over (`flip`), leafing through (`leaf`), looking closer (`zoom`), and taking things out (`reachIn`).
+- **In hand:** turning over (`flip`), leafing through (`leaf`), and taking things out (`reachIn`). How it's held is `pose`: moved, rotated and zoomed, shown by `hold()` as a transform on `#grip`, around `#hand`, which does the turning over. None of it is saved; every pickup starts straight and fitted.
+  - **Handling it:**
+    - One finger or the mouse drags it.
+    - The mouse by a corner rotates it (the pointer changes there).
+    - Two fingers move, rotate and zoom it together.
+    - A quick sideways flick turns it over or turns the page, then springs back. Flicks don't count while it's wider than the view, where a quick drag is reading.
+    - A double-tap turns it over, turns the page (back a page on its left side), or looks closer at something solid.
+    - A single tap does nothing: it's where a drag starts.
+  - **Computers:**
+    - Scrolling reads down something bigger than the view.
+    - Ctrl+scroll zooms; a trackpad pinch arrives as Ctrl+scroll.
+    - Shift+scroll rotates.
+    - Safari's trackpad pinch and twist arrive as gesture events.
+  - **Keys:**
+    - F turns it over.
+    - R and Shift+R rotate it.
+    - + and − zoom.
+    - 0 puts it straight.
+    - Page Up and Page Down turn pages.
+    - The arrows turn it over or turn pages, except while looking closer, when they move it.
+  - **"Look closer"** makes it straight, at least twice its size and as wide as the view, and shows it from the top. Turning the page while looking closer starts the next page from the top.
+  - **"Put it straight"** floats over the view, so it never takes room from the thing. It shows only once the thing is tilted, moved or held further away.
+  - **Taking things out** of the kete or the envelope is still only ever the button.
 - **Opening:** the intro and the lid animation (`openLid`).
 - **Talking:** the mics, hold Space to talk, and subtitles.
 - **The rest:** the "Looked at:" line and the ending.
@@ -101,12 +123,17 @@ Playwright and Chromium are already installed in these cloud sessions. On the ow
 
 ```sh
 python3 -m http.server 8765 --bind 127.0.0.1 &
-node tools/tests/box.js /tmp/shots-box        # 81 checks: pile, turning over, leafing, kete/envelope, saving, "Looked at", phones
+node tools/tests/box.js /tmp/shots-box        # 113 checks: pile, handling in hand, turning over, leafing, kete/envelope, saving, "Looked at", phones
 node tools/tests/answers.js /tmp/shots-ans    # 18 checks: plain-language answers, hedges, codes, word matching
 node tools/tests/voice.js /tmp/shots-voice    # 101 checks, about 10 minutes: listening, speaking, setup, hold Space, lid
 ```
 
-Every check prints PASS or FAIL. The suites should be fully green, at 81, 18 and 101. They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
+Every check prints PASS or FAIL. The suites should be fully green, at 113, 18 and 101. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
+
+**Trying a branch on a phone before merging:** push it, then open `https://raw.githack.com/richdurham/chickencoop/<full commit id>/demo/index.html`. Use the commit id, not the branch name, because `claude/...` branch names have a slash in them.
+- **The first visit** shows a notice page from raw.githack.com, with an ad; "Open the page" goes through to the game, and later visits skip it.
+- **It's https,** so the microphone works and the browser keeps Alexa's model between visits, as on the live site.
+- **Serving from the Mac** over the home network (plain http) is slower: the phone can't keep the model, and Python's server is basic.
 
 **Answer accuracy:** when you change `QA` examples, item `about` text or `label`s, compare against `main` on the held-out questions. `tools/tests/accuracy/eval.mjs` runs the game's real matcher in Node and needs `npm install @huggingface/transformers@3.8.1` somewhere for its Node build. Current scores with the item step:
 - `questions-1.json`: 69 of 76
@@ -124,20 +151,24 @@ The remaining misses are listed by the script. Some are deliberate: questions ab
 
 ## What's next
 
-1. **Option 2, handling things by hand.** The owner chose this as the next big feature. It would add:
-   - **In the enlarged view:**
-     - drag to move a thing;
-     - rotate it, with a two-finger twist on phones, or a corner drag or the scroll wheel on computers;
-     - flick or double-tap to turn it over;
-     - pinch or scroll to zoom;
-     - a "Put it straight" reset, so articles stay readable.
-   - **On the table:** the same rotation, and things can lie face down until turned over.
-
-   Things to watch:
-   - Today a tap looks closer and a swipe turns over or turns pages, so those gestures need reassigning.
-   - Every gesture needs a keyboard equivalent.
-   - Phones are cramped.
-   - `tools/tests/box.js` will need updating.
+1. **Option 2, handling things by hand.** The owner chose this as the next big feature. It was planned as three versions (A, the easier one; B, everything in hand; C, the full one), and the owner picked B, which is built: see "In hand" above. The table is unchanged.
+   - **Feel on a real phone:** this still needs the owner to try it. The numbers to tune are in `game.js`:
+     - a flick is at least 0.5 px/ms sideways, travelling under 160 px;
+     - a double-tap is two taps within 350 ms and 30 px;
+     - the corner zones are 18% of the shorter side, kept between 22 and 56 px;
+     - the glide after a drag while looking closer slows by 6% a frame.
+   - **Not tested here:** Safari's trackpad gesture events.
+   - **The scroll wheel:** the owner's list gave the scroll wheel both rotating and zooming. Plain scrolling reads instead, Ctrl+scroll zooms, and Shift+scroll rotates. This is easy to swap in `wheel()`.
+   - **What's left is version C, the table:**
+     - **Rotating on the table:** a twist with a second finger anywhere on the table, a corner drag, Shift+scroll, and R. Each thing's angle is already saved, as `state.layout[id][3]`.
+     - **Lying face down:** a new saved list, `state.down`.
+       - Old saves load with nothing face down.
+       - The storage key stays the same.
+       - It needs 14 small table copies of backs: the 13 flat things on the table, plus the card.
+       - A thing lying face down is picked up showing its back, and put down with its back showing it lies face down.
+     - **Turning over where it lies:** double-tap or F. A single tap would have to wait about 250 ms before picking a thing up; leaving out the double-tap avoids that.
+     - **The table's drag code** in `bindThing` would be rewritten to handle a second finger across the whole table. That stops players pinching the page to zoom over the table.
+     - **The risks:** the table is where the slips hide. Corners that rotate could slow digging, and things that start face down must not be the ones that matter.
 
    A full 3D version was discussed and not chosen.
 2. **Alexa's lines.** If the owner edits lines in `data.js`, follow `tools/alexa-voice/README.md`. `make.py` records only new or changed lines and removes stale clips. Hand recordings are dropped in under the file name listed in `script.md`.

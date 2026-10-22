@@ -19,7 +19,7 @@ Then run a suite:
 - **What they print:** each check prints PASS or FAIL, and a failure makes the exit code 1.
 - **The address** defaults to `http://127.0.0.1:8765/demo/`. Give the live site's address to check it after a merge.
 - **What they cover:**
-  - `box.js`: the pile, picking up, turning over, leafing, the kete and envelope, saving, "Looked at", and phones.
+  - `box.js`: the pile, picking up, handling things in hand (moving, rotating, zooming, flicks, double-taps, keys, two fingers on a phone), turning over, leafing, the kete and envelope, saving, "Looked at", and phones.
   - `answers.js`: Alexa's plain-language answers, and word matching without the model.
   - `voice.js`: listening, speaking, the first-visit choice, hold Space, subtitles and the lid animation. It fakes the speech recogniser, voices and microphone, and plays `clips/` as what the microphone hears.
 - **`accuracy/eval.mjs`** runs the game's real matcher in Node on the held-out questions in `accuracy/questions-*.json`. It needs the Node build of `@huggingface/transformers@3.8.1`:
