@@ -1,7 +1,7 @@
 /* Open the Chicken Coop — story content.
    Items are the real contents of Katie's box (images in box/, made from
    Open-the-chicken-coop-game-files). Alexa's lines are the Alexa Blueprint
-   script, word for word. */
+   script, word for word, apart from the coins answer, which the owner rewrote. */
 
 const INTRO_PHRASES = [
   'alexa open the chicken coop',
@@ -21,11 +21,12 @@ const INTRO_PHRASES = [
    thing at a time and put down beside it.
    `sides` names the pages of things that turn over or open (2 sides flip,
    more leaf). Everything flat turns over, whether or not there's anything on
-   the back, so nothing tells players which things matter; backs stamped
-   PLACEHOLDER stand in until the real ones are photographed. `label` and
-   `caption` (heard by screen readers) say what something is, never what to
-   notice. `credit` ({ text, href }) attributes a stand-in photo that didn't
-   come from the real box.
+   the back, so nothing tells players which things matter. (The box's lid
+   doesn't: its top is seen when the box is closed.) The things themselves are
+   gone, so backs that were never photographed were made from their fronts, by
+   tools/box-images/backs.py. `label` and `caption` (heard by screen readers)
+   say what something is, never what to notice. `credit` ({ text, href })
+   attributes a stand-in photo that didn't come from the real box.
    For understanding questions: `name` is how Alexa refers to the item,
    `about` says only what is visible on it (never shown or spoken; it helps
    tell which item a question is about), and `links` lists the QA answers
@@ -35,7 +36,7 @@ const ITEMS = [
   { id: 'lid-note', cut: true, label: 'Pink post-it', caption: 'A pink post-it note with handwriting on it.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 420,
     name: 'the pink post-it', links: ['tim', 'postit'],
     about: ['A pink post-it note stuck on the lid of the box, handwritten and signed Tim.', 'A handwritten note from Tim on top of the box.', 'It says Alexa called and asked for Katie\'s things to be packed up and sent to her, and that he packed it himself.'] },
-  { id: 'lid-inside', label: 'The lid', caption: 'The lid of the box.', pages: 2, sides: ['Inside', 'Outside'], w: 560, h: 420,
+  { id: 'lid-inside', label: 'The lid', caption: 'The lid of the box.', pages: 1, w: 560, h: 420,
     name: 'the writing inside the lid', links: ['coop'],
     about: ['Handwriting on the inside of the box lid that says: Alexa, open the chicken coop.'] },
 
@@ -47,17 +48,17 @@ const ITEMS = [
     about: ['A small woven flax kete, a Maori bag with handles.'] },
   { id: 'dog-tags', cut: true, in: 'kete', label: 'Dog tags', caption: 'Dog tags on ball chains.', pages: 2, sides: ['Front', 'Back'], w: 600, h: 451,
     name: 'the dog tags', links: [],
-    about: ['Two metal dog tags on a ball chain, stamped Name, Age, Sex, Blood and Birth and otherwise left blank.', 'Three small clear round capsules on ball chains.'] },
+    about: ['Two metal dog tags on a ball chain, stamped Name, Age, Sex, Blood and Birth, with worn letters punched beside them; of the name only its first letter, a K, can be read.', 'Three small clear round capsules on ball chains.'] },
   { id: 'kete-note', cut: true, in: 'kete', label: 'Paper from the kete', caption: 'A sheet of paper, folded over at the top.', pages: 2, sides: ['Front', 'Back'], w: 420, h: 560,
     name: 'the paper from the kete', links: [],
     about: ['A folded sheet of white paper with September 2018 written on it in green ink.'] },
   { id: 'boarding-pass', label: 'Boarding pass', caption: 'A boarding pass.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 231,
     name: 'the boarding pass', links: [],
     about: ['A red and white airline boarding pass for a flight from Moscow to Auckland on 12 November 2018.'] },
-  { id: 'coins', label: 'Coins', caption: 'A handful of loose coins.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 374,
-    credit: { text: 'Stand-in photo (the box’s coins were lost): rawpixel, public domain (CC0 1.0)', href: 'https://www.rawpixel.com/image/6034993/photo-image-background-public-domain-golden' },
+  { id: 'coins', cut: true, label: 'Coins', caption: 'Two coins.', pages: 2, sides: ['Front', 'Back'], w: 600, h: 338,
+    credit: { text: 'Stand-in photos (the box’s coins are gone): riversxian on Numista, CC BY 4.0, cut out and laid together', href: 'https://en.numista.com/2378' },
     name: 'the coins', links: ['coins'],
-    about: ['A handful of loose euro coins.'] },
+    about: ['Two Croatian coins, a 5 kuna and a 1 kuna, with a marten on one side and a brown bear or a nightingale on the other.'] },
   { id: 'certificate', label: 'Certificate', caption: 'A certificate of achievement.', pages: 2, sides: ['Front', 'Back'], w: 560, h: 378,
     name: 'the certificate', links: [],
     about: ['A certificate of achievement with a blue patterned border, a gold seal and two signatures, for contributions to science.'] },
@@ -137,7 +138,7 @@ const PILE = [
   ['plant', 14, 55, 15, -20],
   ['glasses', 61, 86, 24, -12],
   ['mug', 90, 90, 17, 0],
-  ['coins', 69, 58, 22, 0],
+  ['coins', 46, 72, 17, -6],
   ['wrinkled-note', 34, 40, 28, -14],
   ['lid-note', 59, 30, 16, 9]
 ];
@@ -247,7 +248,7 @@ const QA = [
     keys: ['what are the coins', 'are the coins euros', 'coins', 'euros'],
     examples: ['What are the coins?', 'Are the coins euros?', 'Are the coins Russian?', 'Where are the coins from?',
       'Why are there coins in the box?', 'What currency is the money?'],
-    a: 'They are euros. I guess Katie had some left over from her trip to Dubrovnik'
+    a: 'I guess they are euros or something. Katie must have had some left over from her trip.'
   },
   {
     id: 'tim',

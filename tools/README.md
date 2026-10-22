@@ -34,4 +34,6 @@ The scripts that made the box's images. Each script's first lines say how to run
 - **`cut.py`, `region.py`, `colourcut.py`, `split.py`** remove a photo's background, cut out part of a photo, cut out by colour, or split a cut-out into pieces.
 - **`lid-top.py`** straightens the lid's top out of the closed-box photo, for the opening animation.
 - **`slips.py`** draws the two command-code slips. It uses the La Belle Aurore font (SIL Open Font License, from Google Fonts).
-- **`backs.py`** makes the backs of the flat things from their fronts, and the PLACEHOLDER stand-ins. Once real photos of backs are in, take those out of it before running it again.
+- **`backs.py`** makes the backs of the flat things from their fronts. The things themselves are gone, so these backs are all there is. Give it names to remake only some (`python backs.py <repo> envelope`).
+- **`tags.py`** punches worn lettering into the dog tags beside their stamped labels, leaving only the name's K readable, and makes their back from the result. It starts from the tags as photographed, which it takes from the repo's history.
+- **`coins.py`** cuts out the two kuna coins from their photos (both sides of each, from Numista, CC BY 4.0), lays them side by side, and makes their back by turning the pair over.

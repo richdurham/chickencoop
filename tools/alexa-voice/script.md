@@ -21,7 +21,7 @@ recording instead, save it as an MP3 with the same file name.
 - `04747da3b0.mp3` Ken is Katie’s husband. They have two lovely small kids who go to the local kindy with my daughter. Ken is with the kids in Hong Kong at the moment, his Mum lives there.
 - `353a2d4cbf.mp3` Yes I am
 - `a5c4488639.mp3` I think the box is harmless
-- `a4e64c7e76.mp3` They are euros. I guess Katie had some left over from her trip to Dubrovnik
+- `abd6104d1b.mp3` I guess they are euros or something. Katie must have had some left over from her trip.
 - `44a07e4c6a.mp3` Tim? He is Katie’s long time colleague, oh wait I think he became the manager recently. He was Katie’s favourite colleague, we met a few times at barbeques.
 - `c8aa466789.mp3` Me? I trust Katie’s plan, but she clearly had some reservations because of surrounding events. You have the command codes, so the choice is clearly up to you.
 - `bd7ce8bf5a.mp3` I am Alexa, Alexa Gardner. I am Katie’s childhood friend.

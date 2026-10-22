@@ -22,6 +22,13 @@ Record the new and changed lines (the others are left as they are):
 It needs node and ffmpeg. `--voice` picks another Kokoro voice, and `--all`
 records every line again (for example after changing the voice).
 
+If it stops with "Error processing file '/Users/runner/…/espeak-ng-data/phontab'",
+espeak couldn't use its data folder because the path is too long: it keeps
+only about 160 characters. That happens when Python is installed in a deeply
+nested folder. Install Python somewhere with a shorter path, or copy
+`espeakng_loader/espeak-ng-data` to a short path and return that path from
+`espeakng_loader.get_data_path` before running `make.py`.
+
 `make.py` fixes how a few words are said (`SAY` at the top: kete, Titirangi,
 kindy) and reads the codes digit by digit. Add to `SAY` if a new word comes out
 wrong.

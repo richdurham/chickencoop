@@ -78,7 +78,7 @@ const READY = () => { window.addEventListener('chickencoop:meaning-ready', () =>
   r = await say(page, 'could this virus kill a person');
   check(r.startsWith('I’m not sure, I don’t understand the science'), 'natural question by meaning: kill a person -> harmful');
   r = await say(page, 'why does she have euros');
-  check(r.startsWith('I think maybe you’re asking about the coins? They are euros'), 'middle confidence gets the topic hedge');
+  check(r.startsWith('I think maybe you’re asking about the coins? I guess they are euros'), 'middle confidence gets the topic hedge');
   r = await say(page, 'why is there a mug in the box');
   check(r.startsWith('I don’t know anything about the mug'), 'item with no scripted answer gets the unknown-item line');
   r = await say(page, 'how tall is Mount Everest');
