@@ -185,8 +185,8 @@ async function say(page, text) {
   check(await page.isVisible('#reader-credit'), 'the stand-in coins keep their photo credit');
   await page.click('#reader .reader__x');
 
-  // Everything flat turns over, whether or not there is anything on the back; solid things don't.
-  for (const [id, back] of [['lid-note', 'Back'], ['lid-inside', 'Outside'], ['wrinkled-note', 'Back'], ['dog-tags', 'Back'], ['kete-note', 'Back'],
+  // Everything flat turns over, whether or not there is anything on the back; solid things, and the lid, don't.
+  for (const [id, back] of [['lid-note', 'Back'], ['wrinkled-note', 'Back'], ['dog-tags', 'Back'], ['kete-note', 'Back'],
     ['boarding-pass', 'Back'], ['coins', 'Back'], ['certificate', 'Back'], ['release-slip', 'Back'], ['destroy-slip', 'Back'],
     ['family-photo', 'Back'], ['summer-school', 'Back'], ['who-trip', 'Back'], ['envelope', 'Back']]) {
     await page.focus('.thing[data-item="' + id + '"]'); await page.keyboard.press('Enter');
@@ -199,13 +199,13 @@ async function say(page, text) {
     await page.keyboard.press('Escape');
   }
   const solid = [];
-  for (const id of ['kete', 'plant', 'glasses', 'mug']) {
+  for (const id of ['kete', 'plant', 'glasses', 'mug', 'lid-inside']) {
     await page.focus('.thing[data-item="' + id + '"]'); await page.keyboard.press('Enter');
     await page.waitForSelector('#reader:not([hidden])');
     if (await page.isHidden('#reader-turn') && await page.isHidden('#reader-prev')) solid.push(id);
     await page.keyboard.press('Escape');
   }
-  check(solid.length === 4, 'the kete, the plant, the glasses and the mug don’t turn over: ' + solid.join(', '));
+  check(solid.length === 5, 'the kete, the plant, the glasses, the mug and the lid don’t turn over: ' + solid.join(', '));
   // A solid thing: look closer by tapping it.
   await pickUp(page, 'mug');
   await page.click('#hand');
@@ -248,11 +248,17 @@ async function say(page, text) {
     const p = await c.newPage(); watch(p, 'all: ');
     await p.goto(URL);
     const ids = await p.evaluate(() => ITEMS.map(it => it.id));
-    await p.evaluate(ids => { localStorage.setItem('chickencoop-demo-v2', JSON.stringify({ started: true, opened: ids, log: [], ending: null, fallback: 0, layout: {}, handled: true, out: ['dog-tags', 'kete-note', 'card'] })); }, ids);
+    // The coins were left where they were when they were a bigger photo.
+    await p.evaluate(ids => { localStorage.setItem('chickencoop-demo-v2', JSON.stringify({ started: true, opened: ids, log: [], ending: null, fallback: 0, layout: { coins: [30, 40, 22, 5, 90] }, handled: true, out: ['dog-tags', 'kete-note', 'card'] })); }, ids);
     await p.reload();
     await p.click('#resume');
     await p.waitForSelector('#game:not([hidden])');
     check((await p.textContent('#progress')) === 'Looked at: all?', 'having looked at everything still only says "all?"');
+    const coins = await p.evaluate(() => {
+      const el = document.querySelector('.thing[data-item="coins"]');
+      return { share: el.offsetWidth / document.getElementById('carton').offsetWidth, turn: el.style.getPropertyValue('--r'), size: PILE.find(r => r[0] === 'coins')[3] / 100 };
+    });
+    check(Math.abs(coins.share - coins.size) < 0.02 && coins.turn === '5deg', `a thing stays where it was left but takes its current size (${coins.share.toFixed(3)} of the box, ${coins.turn})`);
     await c.close();
   }
 

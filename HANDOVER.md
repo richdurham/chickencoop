@@ -1,10 +1,11 @@
 # Handover: the browser demo of Open the Chicken Coop
 
-Written on 21 October 2026 for the next chat that works on this repo. It covers what the demo is, what the owner wants from it, how it is built, how to test a change, and what is queued next. Everything below is on `main` and live.
+Written on 21 October 2026 for the next chat that works on this repo, and updated the same day once the real box turned out to be gone. It covers what the demo is, what the owner wants from it, how it is built, how to test a change, and what is queued next. Everything below is on `main` and live.
 
 - **Live demo:** https://richdurham.github.io/chickencoop/demo/ (GitHub Pages, deployed from `main`)
 - **Repo:** `richdurham/chickencoop`. The demo is in `demo/`, and tools and tests are in `tools/`.
 - **Source material:** `Open-the-chicken-coop-game-files/`, which holds the photos and PDFs of the real box's contents and Alexa's script. The `_SPOILERS` folder holds the story's background.
+- **The real box is gone.** The owner threw it away with everything in it, so these photos are all there will ever be. Never ask the owner to photograph anything in it.
 
 ## What it is
 
@@ -20,7 +21,7 @@ Written on 21 October 2026 for the next chat that works on this repo. It covers 
 
 - **It's a demo of the real box,** so it should feel like handling the real things.
 - **The game never helps.** The box is full of red herrings, and players are meant to poke at everything because they don't know what matters. Nothing on screen may hint at what matters:
-  - **Everything flat turns over,** even when its back is blank. Only the solid things (kete, plant, glasses, mug) don't.
+  - **Everything flat turns over,** even when its back is blank. Only the solid things (kete, plant, glasses, mug) don't, and nor does the lid, whose top is seen on the closed box.
   - **Names and captions are neutral.** The `label` is visible; the `caption` is only heard by screen readers. Both say what a thing is, never what to notice.
   - **Progress is vague.** The line reads "Looked at: nothing / a few / some / many / most / all?". It's never a count, and never a plain "all": the owner deliberately frustrates completionists.
   - **No suggested questions anywhere.**
@@ -28,7 +29,9 @@ Written on 21 October 2026 for the next chat that works on this repo. It covers 
 - **Alexa's lines are the original Alexa Blueprint script, word for word.** They live in `demo/data.js` (`WELCOME`, `QA[].a`, `CODES`, `FALLBACKS`, `EXIT`, `START_HINT`). The owner will review them and may change some. Changed lines must then be re-recorded (see Voice below), and the owner may record some by hand.
 - **Alexa's voice is a young-sounding British woman:** Kokoro `bf_isabella`, the owner's choice.
 - **The opening animation lasts at least 2 seconds** (the lid takes 2.6). It covers the time her sentence model takes to load.
-- **Backs stamped PLACEHOLDER are stand-ins until the owner photographs the real ones.**
+- **Backs that were never photographed are made from their fronts** by `tools/box-images/backs.py`: blank paper, a faint mirrored show-through, and for the envelope its open flap and seams.
+- **The dog tags could be anyone's.** "A paucity of information" is the design: the name is worn away except for its first letter, a K, which fits every suspect (Katie and Ken Yeung, Igor Kuznetsov, Sam Kirkpatrick, Vince Kory or Vlad Korsakov, also called "Ken Kori", and Kevin Hackwell). The other fields are worn past reading, and nothing says whose military they're from. Keep it that way; `tools/box-images/tags.py` makes them.
+- **The coins are Croatian kuna,** a 5 kuna (2001) and a 1 kuna (2007): the conference was in Dubrovnik in February 2019, before Croatia took up the euro. They are credited photos (riversxian on Numista, CC BY 4.0), cut out by `tools/box-images/coins.py`. The Croatian National Bank allows faithful 2D pictures of kuna coins without asking. Alexa's scripted answer still says "They are euros"; that line is the owner's to change.
 - **How the owner works:** they like to hear how hard something is, with easier and fuller alternatives, before a big feature is built. They merge pull requests themselves, usually quickly. After a merge, check the change on the live site.
 
 ## How it's built
@@ -94,7 +97,7 @@ The demo is a static site: plain HTML, CSS and JavaScript, no build step. Jekyll
 
 ## Testing a change
 
-Playwright and Chromium are already installed in these cloud sessions. Serve the repo from its root, then run the suites. Each one takes a directory for screenshots and, optionally, a site address.
+Playwright and Chromium are already installed in these cloud sessions. On the owner's Mac they aren't: install them into a scratch folder (`npm install playwright`, then `npx playwright install chromium`) and run the suites with `NODE_PATH=<that folder>/node_modules`. The image scripts need a Python environment with Pillow, NumPy and `opencv-python-headless`. Serve the repo from its root, then run the suites. Each one takes a directory for screenshots and, optionally, a site address.
 
 ```sh
 python3 -m http.server 8765 --bind 127.0.0.1 &
@@ -121,21 +124,7 @@ The remaining misses are listed by the script. Some are deliberate: questions ab
 
 ## What's next
 
-1. **The real backs.** The owner is photographing these to replace the PLACEHOLDER stand-ins:
-   - the family photo's back;
-   - the envelope's flap side;
-   - the boarding pass's back;
-   - the dog tags' backs;
-   - the coins' backs (the real coins were lost, and the front is a stand-in photo with a credit);
-   - the lid's top without Tim's post-it.
-
-   To use a photo:
-   - Crop a back to the same shape as its front, because it fills the front's frame when turned.
-   - Remove the background for cut-out things (the dog tags) with `tools/box-images/cut.py` or `region.py`.
-   - Run `put.py` with side 2.
-
-   When all six are in, take the PLACEHOLDER wording out of `data.js` and `README.md`. **Don't rerun `backs.py` afterwards** without removing the photographed ones from it, because it rewrites those files.
-2. **Option 2, handling things by hand.** The owner chose to do this after the photos. It would add:
+1. **Option 2, handling things by hand.** The owner chose this as the next big feature. It would add:
    - **In the enlarged view:**
      - drag to move a thing;
      - rotate it, with a two-finger twist on phones, or a corner drag or the scroll wheel on computers;
@@ -151,13 +140,15 @@ The remaining misses are listed by the script. Some are deliberate: questions ab
    - `tools/tests/box.js` will need updating.
 
    A full 3D version was discussed and not chosen.
-3. **Alexa's lines.** If the owner edits them in `data.js`, follow `tools/alexa-voice/README.md`. `make.py` records only new or changed lines and removes stale clips. Hand recordings are dropped in under the file name listed in `script.md`.
+2. **Alexa's lines.** The coins answer ("They are euros…") no longer matches the kuna. If the owner edits lines in `data.js`, follow `tools/alexa-voice/README.md`. `make.py` records only new or changed lines and removes stale clips. Hand recordings are dropped in under the file name listed in `script.md`.
 
 ## Known quirks
 
 - **Phones:** if the player taps "The box" during the lid animation, the view still switches to Alexa when the lid lands. This is minor.
-- **The post-it:** it is on the lid in the intro photo, and in the pile once the box is open. This is by design. The lid's back has the post-it painted out, and the stamp covers the lettering that couldn't be restored.
+- **The post-it:** it is on the lid in the intro photo, and in the pile once the box is open. This is by design.
+- **The dog tags' back:** turned over, the tag that was on top stays on top, which real tags wouldn't. The part of the lower tag that lies under the other was never photographed.
 - **Unused recordings:** `UNKNOWN_ITEM` lines are recorded for every item, though items with `links` never use them. This is harmless.
 - **The folder:** it has no `folder-cover-1.jpg`, because it opens straight onto its documents.
-- **Adding to the pile:** new things in `PILE` appear for returning players in their starting spots, at the bottom.
+- **Adding to the pile:** new things in `PILE` appear for returning players in their starting spots, at the bottom. A thing a player moved keeps its spot and angle but always takes its size from `PILE` (or `TAKE_OUT`), so changing a size reaches returning players too.
+- **Close calls in understanding:** the browser works out the example sentences' meanings 16 at a time, and its compressed model is slightly affected by which sentences share a batch. Adding or removing a sentence (an `about` line or a QA example) moves every later batch, which can tip answers that sit near a cutoff. The known one: "who are they" while holding the family photo, where the group photo scores 0.488 against the item cutoff of 0.50; at 0.507 Alexa answers about Igor instead of Ken. `eval.mjs` in Node doesn't batch, so it can't see this; after changing sentences, run `voice.js` as well. The dog tags and coins kept their number of `about` lines for this reason.
 - **Tests:** in the test scripts, `URL` is the site address constant, so don't call `new URL(...)` there.

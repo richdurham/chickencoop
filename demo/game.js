@@ -105,12 +105,21 @@
   }
 
   /* Where a thing lies: [x, y, width, angle, z], in the box terms PILE uses.
-     Where the player left it wins over the starting arrangement. */
+     Where the player left it wins over the starting arrangement, but its size is
+     always today's, so a thing made bigger or smaller fits returning players too. */
   function placeOf(id) {
-    if (state.layout[id]) return state.layout[id].slice();
+    var start = startOf(id);
+    if (!state.layout[id]) return start;
+    var p = state.layout[id].slice();
+    p[2] = start[2];
+    return p;
+  }
+
+  function startOf(id) {
     if (id === LID.id) return LID[deskShape].concat([0]);
     for (var i = 0; i < PILE.length; i++) if (PILE[i][0] === id) return PILE[i].slice(1).concat([i + 1]);
-    return [50, 50, 20, 0, 1];
+    var lands = TAKE_OUT[id] || [20, 0];
+    return [50, 50, lands[0], lands[1], 1];
   }
 
   // Keep a thing's centre on the desk, wherever the box sits on it.
