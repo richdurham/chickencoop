@@ -130,6 +130,11 @@ node tools/tests/voice.js /tmp/shots-voice    # 101 checks, about 10 minutes: li
 
 Every check prints PASS or FAIL. The suites should be fully green, at 113, 18 and 101. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
 
+**Trying a branch on a phone before merging:** push it, then open `https://raw.githack.com/richdurham/chickencoop/<full commit id>/demo/index.html`. Use the commit id, not the branch name, because `claude/...` branch names have a slash in them.
+- **The first visit** shows a notice page from raw.githack.com, with an ad; "Open the page" goes through to the game, and later visits skip it.
+- **It's https,** so the microphone works and the browser keeps Alexa's model between visits, as on the live site.
+- **Serving from the Mac** over the home network (plain http) is slower: the phone can't keep the model, and Python's server is basic.
+
 **Answer accuracy:** when you change `QA` examples, item `about` text or `label`s, compare against `main` on the held-out questions. `tools/tests/accuracy/eval.mjs` runs the game's real matcher in Node and needs `npm install @huggingface/transformers@3.8.1` somewhere for its Node build. Current scores with the item step:
 - `questions-1.json`: 69 of 76
 - `questions-2.json`: 46 of 50
