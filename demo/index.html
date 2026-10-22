@@ -93,8 +93,8 @@
     </div>
   </main>
 
-  <!-- Something picked up from the box: reach into it, turn it over, leaf through it, look closer. -->
-  <div id="reader" class="reader" role="dialog" aria-modal="true" aria-labelledby="reader-title" hidden>
+  <!-- Something picked up from the box: move it, rotate it, look closer, turn it over, leaf through it, reach into it. -->
+  <div id="reader" class="reader" role="dialog" aria-modal="true" aria-labelledby="reader-title" aria-describedby="hand-help" hidden>
     <div class="reader__backdrop" data-close></div>
     <div class="reader__sheet">
       <header class="reader__head">
@@ -110,8 +110,10 @@
         </div>
       </header>
       <div id="reader-view" class="reader__view">
-        <div id="hand" class="hand"></div>
+        <div id="grip" class="grip"><div id="hand" class="hand"></div></div>
+        <button id="reader-straight" type="button" class="btn reader__straight" hidden>Put it straight</button>
       </div>
+      <p id="hand-help" class="sr-only">Drag it to move it. Drag a corner, or twist two fingers, to rotate it. Double-tap to turn it over or turn the page. Keys: F turns it over, R rotates it, plus and minus zoom, and 0 puts it straight. While looking closer, the arrow keys move it.</p>
       <p id="reader-page" class="reader__page" aria-live="polite"></p>
       <footer class="reader__foot">
         <div class="reader__moves">
