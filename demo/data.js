@@ -1,7 +1,7 @@
 /* Open the Chicken Coop — story content.
    Items are the real contents of Katie's box (images in box/, made from
    Open-the-chicken-coop-game-files). Alexa's lines are the Alexa Blueprint
-   script, word for word. */
+   script, word for word, apart from the coins answer, which the owner rewrote. */
 
 const INTRO_PHRASES = [
   'alexa open the chicken coop',
@@ -248,7 +248,7 @@ const QA = [
     keys: ['what are the coins', 'are the coins euros', 'coins', 'euros'],
     examples: ['What are the coins?', 'Are the coins euros?', 'Are the coins Russian?', 'Where are the coins from?',
       'Why are there coins in the box?', 'What currency is the money?'],
-    a: 'They are euros. I guess Katie had some left over from her trip to Dubrovnik'
+    a: 'I guess they are euros or something. Katie must have had some left over from her trip.'
   },
   {
     id: 'tim',

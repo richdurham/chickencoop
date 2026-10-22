@@ -26,12 +26,12 @@ Written on 21 October 2026 for the next chat that works on this repo, and update
   - **Progress is vague.** The line reads "Looked at: nothing / a few / some / many / most / all?". It's never a count, and never a plain "all": the owner deliberately frustrates completionists.
   - **No suggested questions anywhere.**
 - **The command codes are hidden.** They are written on two slips of paper at the bottom of the pile: "Release falcon 616" under the envelope and certificate, and "Destroy falcon 264" under the folder. They must never be shown as buttons or prompts in Alexa's panel, because players just click them. Saying a code is matched word for word. The short code gets "are you sure?", and the long one ("…cleansing falcon…") ends the game.
-- **Alexa's lines are the original Alexa Blueprint script, word for word.** They live in `demo/data.js` (`WELCOME`, `QA[].a`, `CODES`, `FALLBACKS`, `EXIT`, `START_HINT`). The owner will review them and may change some. Changed lines must then be re-recorded (see Voice below), and the owner may record some by hand.
+- **Alexa's lines are the original Alexa Blueprint script, word for word,** apart from the coins answer, which the owner rewrote. They live in `demo/data.js` (`WELCOME`, `QA[].a`, `CODES`, `FALLBACKS`, `EXIT`, `START_HINT`). The owner will review them and may change some. Changed lines must then be re-recorded (see Voice below), and the owner may record some by hand.
 - **Alexa's voice is a young-sounding British woman:** Kokoro `bf_isabella`, the owner's choice.
 - **The opening animation lasts at least 2 seconds** (the lid takes 2.6). It covers the time her sentence model takes to load.
 - **Backs that were never photographed are made from their fronts** by `tools/box-images/backs.py`: blank paper, a faint mirrored show-through, and for the envelope its open flap and seams.
 - **The dog tags could be anyone's.** "A paucity of information" is the design: the name is worn away except for its first letter, a K, which fits every suspect (Katie and Ken Yeung, Igor Kuznetsov, Sam Kirkpatrick, Vince Kory or Vlad Korsakov, also called "Ken Kori", and Kevin Hackwell). The other fields are worn past reading, and nothing says whose military they're from. Keep it that way; `tools/box-images/tags.py` makes them.
-- **The coins are Croatian kuna,** a 5 kuna (2001) and a 1 kuna (2007): the conference was in Dubrovnik in February 2019, before Croatia took up the euro. They are credited photos (riversxian on Numista, CC BY 4.0), cut out by `tools/box-images/coins.py`. The Croatian National Bank allows faithful 2D pictures of kuna coins without asking. Alexa's scripted answer still says "They are euros"; that line is the owner's to change.
+- **The coins are Croatian kuna,** a 5 kuna (2001) and a 1 kuna (2007): the conference was in Dubrovnik in February 2019, before Croatia took up the euro. They are credited photos (riversxian on Numista, CC BY 4.0), cut out by `tools/box-images/coins.py`. The Croatian National Bank allows faithful 2D pictures of kuna coins without asking. Alexa is unreliable about them on purpose: the owner rewrote her answer to "I guess they are euros or something. Katie must have had some left over from her trip."
 - **How the owner works:** they like to hear how hard something is, with easier and fuller alternatives, before a big feature is built. They merge pull requests themselves, usually quickly. After a merge, check the change on the live site.
 
 ## How it's built
@@ -140,7 +140,7 @@ The remaining misses are listed by the script. Some are deliberate: questions ab
    - `tools/tests/box.js` will need updating.
 
    A full 3D version was discussed and not chosen.
-2. **Alexa's lines.** The coins answer ("They are euros…") no longer matches the kuna. If the owner edits lines in `data.js`, follow `tools/alexa-voice/README.md`. `make.py` records only new or changed lines and removes stale clips. Hand recordings are dropped in under the file name listed in `script.md`.
+2. **Alexa's lines.** If the owner edits lines in `data.js`, follow `tools/alexa-voice/README.md`. `make.py` records only new or changed lines and removes stale clips. Hand recordings are dropped in under the file name listed in `script.md`.
 
 ## Known quirks
 
