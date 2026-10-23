@@ -1,6 +1,6 @@
 # Handover: the browser demo of Open the Chicken Coop
 
-Written on 21 October 2026 for the next chat that works on this repo, updated the same day once the real box turned out to be gone, and on 22 October 2026 once things could be handled in hand. It covers what the demo is, what the owner wants from it, how it is built, how to test a change, and what is queued next. Everything below is on `main` and live.
+Written on 21 October 2026 for the next chat that works on this repo, updated the same day once the real box turned out to be gone, on 22 October 2026 once things could be handled in hand, and on 23 October 2026 once the page took on its hastily made look. It covers what the demo is, what the owner wants from it, how it is built, how to test a change, and what is queued next. Everything below is on `main` and live.
 
 - **Live demo:** https://richdurham.github.io/chickencoop/demo/ (GitHub Pages, deployed from `main`)
 - **Repo:** `richdurham/chickencoop`. The demo is in `demo/`, and tools and tests are in `tools/`.
@@ -20,10 +20,23 @@ Written on 21 October 2026 for the next chat that works on this repo, updated th
 ## What the owner wants (keep these)
 
 - **It's a demo of the real box,** so it should feel like handling the real things.
+- **The page looks hastily made,** as if someone threw it together with the browser's defaults. The owner chose this from mockups, and `demo/style.css` keeps it that way:
+  - **The page:** white, with Times New Roman text and flush left.
+  - **Dark mode:** it follows the player's device, as a page left on defaults would. Set to dark mode, players get the browser's own dark page and dark buttons. The owner wants this: it's the player's preference, and it adds to the hastily made feel.
+    - `<meta name="color-scheme" content="light dark">` in `index.html` does this.
+    - Colours in `style.css` use the browser's own names (`Canvas`, `LinkText`), so they follow along.
+    - Declaring dark support also stops browsers that darken websites themselves (Chrome's Auto Dark Mode, for one) from inverting things on the table: they turned the black glasses white and the coins into white blobs.
+  - **Controls:** the browser's own buttons and text boxes, and plain blue links for "Start over" and "Go back to the box you already opened".
+  - **Alexa's panel:** a plain bordered box, with her replies as a transcript ("Alexa:", "You:") rather than chat bubbles.
+  - **The two exceptions:**
+    - the title, in Permanent Marker, which echoes the marker writing on the lid;
+    - a fake web server line under the intro: "Apache/2.4.58 (Ubuntu) Server at titirangi.local Port 80", like the signature on a server's error page.
+  - **The box and Katie's things keep their looks,** since they're the game.
+  - **On phones,** the main buttons are a little taller, so they're easy to tap.
 - **The game never helps.** The box is full of red herrings, and players are meant to poke at everything because they don't know what matters. Nothing on screen may hint at what matters:
   - **Everything flat turns over,** even when its back is blank. Only the solid things (kete, plant, glasses, mug) don't, and nor does the lid, whose top is seen on the closed box.
   - **Names and captions are neutral.** The `label` is visible; the `caption` is only heard by screen readers. Both say what a thing is, never what to notice.
-  - **Progress is vague.** The line reads "Looked at: nothing / a few / some / many / most / all?". It's never a count, and never a plain "all": the owner deliberately frustrates completionists.
+  - **Progress is vague.** The line reads "Looked at: nothing / a few / some / many / most / all?". It's never a count, and never a plain "all": the owner deliberately frustrates completionists. The ending uses the same line, and lists only the things that were looked at, never the ones that weren't.
   - **No suggested questions anywhere.**
 - **The command codes are hidden.** They are written on two slips of paper at the bottom of the pile: "Release falcon 616" under the envelope and certificate, and "Destroy falcon 264" under the folder. They must never be shown as buttons or prompts in Alexa's panel, because players just click them. Saying a code is matched word for word. The short code gets "are you sure?", and the long one ("…cleansing falcon…") ends the game.
 - **Alexa's lines are the original Alexa Blueprint script, word for word,** apart from the coins answer, which the owner rewrote. They live in `demo/data.js` (`WELCOME`, `QA[].a`, `CODES`, `FALLBACKS`, `EXIT`, `START_HINT`). The owner will review them and may change some. Changed lines must then be re-recorded (see Voice below), and the owner may record some by hand.
@@ -41,6 +54,7 @@ The demo is a static site: plain HTML, CSS and JavaScript, no build step. Jekyll
 | File | What it does |
 |---|---|
 | `demo/index.html` | The page: intro, box, Alexa's panel, the in-hand reader, the first-visit setup dialog, subtitles and the ending. Scripts load in order: data, understand, voice, game, meaning (a module). |
+| `demo/style.css` | The look (see "The page looks hastily made" above), plus how the box, the pile and the thing in hand are drawn. |
 | `demo/data.js` | All the content. The header comments explain every field. See the list below the table. |
 | `demo/game.js` | The game. See the list below the table. |
 | `demo/understand.js` | Matching a question to an answer. The sentence model first finds the item a question is about (by `label`, `name` and `about`), then scores every answer by its closest example, nudging answers the item `links` to. The result is an answer, a hedge, an unknown-item line or a fallback. Word matching (`keys`) is used until the model is ready, or if it can't run. |
@@ -123,12 +137,12 @@ Playwright and Chromium are already installed in these cloud sessions. On the ow
 
 ```sh
 python3 -m http.server 8765 --bind 127.0.0.1 &
-node tools/tests/box.js /tmp/shots-box        # 113 checks: pile, handling in hand, turning over, leafing, kete/envelope, saving, "Looked at", phones
+node tools/tests/box.js /tmp/shots-box        # 116 checks: pile, handling in hand, turning over, leafing, kete/envelope, saving, "Looked at", the ending, dark mode, phones
 node tools/tests/answers.js /tmp/shots-ans    # 18 checks: plain-language answers, hedges, codes, word matching
 node tools/tests/voice.js /tmp/shots-voice    # 101 checks, about 10 minutes: listening, speaking, setup, hold Space, lid
 ```
 
-Every check prints PASS or FAIL. The suites should be fully green, at 113, 18 and 101. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
+Every check prints PASS or FAIL. The suites should be fully green, at 116, 18 and 101. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
 
 **Trying a branch on a phone before merging:** push it, then open `https://raw.githack.com/richdurham/chickencoop/<full commit id>/demo/index.html`. Use the commit id, not the branch name, because `claude/...` branch names have a slash in them.
 - **The first visit** shows a notice page from raw.githack.com, with an ad; "Open the page" goes through to the game, and later visits skip it.

@@ -263,11 +263,15 @@
     });
   }
 
-  function renderProgress() {
-    // Never a count, and never a plain "all": the box doesn't say what's left in it.
+  // How much has been looked at, in words. Never a count, and never a plain
+  // "all": the box doesn't say what's left in it.
+  function amountSeen() {
     var f = ITEMS.filter(function (it) { return isOpened(it.id); }).length / ITEMS.length;
-    $('progress').textContent = 'Looked at: ' +
-      (f === 0 ? 'nothing' : f < 0.2 ? 'a few' : f < 0.45 ? 'some' : f < 0.75 ? 'many' : f < 1 ? 'most' : 'all?');
+    return f === 0 ? 'nothing' : f < 0.2 ? 'a few' : f < 0.45 ? 'some' : f < 0.75 ? 'many' : f < 1 ? 'most' : 'all?';
+  }
+
+  function renderProgress() {
+    $('progress').textContent = 'Looked at: ' + amountSeen();
   }
 
   // ---------- In hand ----------
@@ -1269,20 +1273,14 @@
     cite.textContent = 'Alexa';
     quote.appendChild(cite);
 
-    $('ending-count').textContent = 'You looked at ' + state.opened.length + ' of ' + ITEMS.length + ' things in the box';
+    // Only what was looked at, and how much only as roughly as the "Looked at" line.
+    $('ending-count').textContent = 'Looked at: ' + amountSeen();
     var list = $('ending-items');
     list.textContent = '';
     ITEMS.forEach(function (item) {
-      var seen = isOpened(item.id);
+      if (!isOpened(item.id)) return;
       var li = document.createElement('li');
-      li.className = seen ? 'seen--yes' : 'seen--no';
-      var s = document.createElement('span');
-      s.className = 'seen__state';
-      s.textContent = seen ? 'Looked at' : 'Didn’t look';
-      var t = document.createElement('span');
-      t.textContent = item.label;
-      li.appendChild(s);
-      li.appendChild(t);
+      li.textContent = item.label;
       list.appendChild(li);
     });
 
