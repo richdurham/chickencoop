@@ -565,20 +565,6 @@ img { display: block; max-width: 100%; }
 
 .ending__alexa cite { display: block; margin-top: 0.5em; }
 
-.ending__items {
-  list-style: none;
-  padding: 0;
-}
-
-.ending__items li {
-  display: grid;
-  grid-template-columns: 7rem minmax(0, 1fr);
-  gap: 1rem;
-  padding: 2px 0;
-}
-
-.seen--no { color: gray; }
-
 /* ---------- Phones and tablets ---------- */
 
 /* Room for a fingertip on the buttons used most. */
@@ -625,8 +611,6 @@ img { display: block; max-width: 100%; }
   .reader__sheet { height: calc(100dvh - 16px); }
   .reader__title { font-size: 1.25em; }
   .reader__foot { justify-content: center; }
-
-  .ending__items li { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 4px 0; }
 }
 
 @media (max-width: 420px) {

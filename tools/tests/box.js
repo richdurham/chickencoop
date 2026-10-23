@@ -361,13 +361,23 @@ async function say(page, text) {
   check(await page.isHidden('#reader-reach'), 'and the kete is still empty');
   await page.keyboard.press('Escape');
 
-  // Alexa still answers in plain language, and the ending still lists everything.
+  // Alexa still answers in plain language, and the ending lists only what was looked at.
   const r = await say(page, 'who is her husband');
   check(r.includes('Ken is Katie'), 'Alexa still answers natural questions');
   await say(page, 'release falcon 616');
   await say(page, 'release cleansing falcon 616');
   await page.waitForSelector('#ending:not([hidden])');
-  check((await page.$$('.ending__items li')).length === 26, 'the ending lists all 26 things');
+  const end = await page.evaluate(() => {
+    const opened = JSON.parse(localStorage.getItem('chickencoop-demo-v2')).opened;
+    return {
+      listed: [...document.querySelectorAll('.ending__items li')].map(li => li.textContent),
+      seen: ITEMS.filter(it => opened.includes(it.id)).map(it => it.label),
+      heading: document.getElementById('ending-count').textContent,
+      line: document.getElementById('progress').textContent
+    };
+  });
+  check(end.seen.length > 0 && JSON.stringify(end.listed) === JSON.stringify(end.seen), `the ending lists the things looked at (${end.listed.length})`);
+  check(end.heading === end.line && !/\d/.test(end.heading), `and says how many only as roughly as the "Looked at" line, never a count ("${end.heading}")`);
   await ctx.close();
   {
     const c = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
@@ -386,6 +396,17 @@ async function say(page, text) {
       return { share: el.offsetWidth / document.getElementById('carton').offsetWidth, turn: el.style.getPropertyValue('--r'), size: PILE.find(r => r[0] === 'coins')[3] / 100 };
     });
     check(Math.abs(coins.share - coins.size) < 0.02 && coins.turn === '5deg', `a thing stays where it was left but takes its current size (${coins.share.toFixed(3)} of the box, ${coins.turn})`);
+    await c.close();
+  }
+  {
+    // An ending after looking at only a few things lists just those.
+    const c = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    await c.addInitScript(() => { try { localStorage.setItem('chickencoop-setup', 'text'); localStorage.setItem('chickencoop-demo-v2', JSON.stringify({ started: true, opened: ['mug', 'kete', 'card'], log: [], ending: { choice: 'destroy' }, fallback: 0, layout: {}, handled: true, out: [] })); } catch (e) {} });
+    const p = await c.newPage(); watch(p, 'few: ');
+    await p.goto(URL);
+    await p.waitForSelector('#ending:not([hidden])');
+    const listed = await p.$$eval('.ending__items li', lis => lis.map(li => li.textContent));
+    check(JSON.stringify(listed) === JSON.stringify(['Kete', 'Mug', 'Get-well card']) && (await p.textContent('#ending-count')) === 'Looked at: a few', `the ending lists only the few things looked at, and says "a few" (${listed.join(', ')})`);
     await c.close();
   }
 
