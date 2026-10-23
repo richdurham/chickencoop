@@ -5,40 +5,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Open the Chicken Coop</title>
   <meta name="description" content="A browser demo of Open the Chicken Coop: go through Katie Yeung's box, talk to her friend Alexa, and decide whether to release her virus or destroy it.">
-  <meta name="theme-color" content="#17231D">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <!-- The closed box. The only way in is to say the line. -->
   <section id="intro" class="intro" aria-labelledby="intro-title">
+    <h1 id="intro-title" class="intro__title">&ldquo;Open the chicken coop.&rdquo;</h1>
+
     <figure class="intro__photo">
       <img src="box/box-closed.jpg" width="1110" height="800" alt="An archive box with KATIE YEUNG and DO NOT DISPOSE written on the lid in marker, and a pink post-it stuck to it.">
     </figure>
 
-    <div class="intro__copy">
-      <h1 id="intro-title" class="intro__title">&ldquo;Open the chicken coop.&rdquo;</h1>
-      <p class="intro__lede">You&rsquo;ve found a box belonging to Katie Yeung, a scientist who has gone missing. Inside are clues about a virus she developed that could eradicate the rats plaguing her community of Titirangi. The choice is yours: release it, or destroy it and her research.</p>
+    <p class="intro__lede">You&rsquo;ve found a box belonging to Katie Yeung, a scientist who has gone missing. Inside are clues about a virus she developed that could eradicate the rats plaguing her community of Titirangi. The choice is yours: release it, or destroy it and her research.</p>
 
-      <form id="intro-form" class="say" autocomplete="off">
-        <label for="intro-input" class="say__label">Say it to Alexa</label>
-        <div class="say__row">
-          <input id="intro-input" class="say__input" type="text" placeholder="Alexa, open the chicken coop" spellcheck="false">
-          <button id="intro-mic" type="button" class="mic mic--paper" aria-label="Talk to Alexa" aria-pressed="false">
-            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 14.5a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5.5a3 3 0 0 0 3 3Z" fill="currentColor"/><path d="M18 11.5a6 6 0 0 1-12 0M12 17.5V21M8.5 21h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          </button>
-          <button type="submit" class="btn btn--paper">Say it</button>
-        </div>
-        <p id="intro-reply" class="say__reply" aria-live="polite"></p>
-      </form>
+    <form id="intro-form" class="say" autocomplete="off">
+      <label for="intro-input" class="say__label">Say it to Alexa</label>
+      <div class="say__row">
+        <input id="intro-input" class="say__input" type="text" placeholder="Alexa, open the chicken coop" spellcheck="false">
+        <button id="intro-mic" type="button" class="mic" aria-label="Talk to Alexa" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 14.5a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5.5a3 3 0 0 0 3 3Z" fill="currentColor"/><path d="M18 11.5a6 6 0 0 1-12 0M12 17.5V21M8.5 21h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button type="submit" class="btn">Say it</button>
+      </div>
+      <p id="intro-reply" class="say__reply" aria-live="polite"></p>
+    </form>
 
-      <p id="resume-row" class="intro__resume" hidden>
-        <button id="resume" type="button" class="btn btn--quiet">Go back to the box you already opened</button>
-      </p>
-    </div>
+    <p id="resume-row" class="intro__resume" hidden>
+      <button id="resume" type="button" class="btn btn--quiet">Go back to the box you already opened</button>
+    </p>
+
+    <!-- A web server's signature, as on its error pages. -->
+    <hr>
+    <address class="intro__server">Apache/2.4.58 (Ubuntu) Server at titirangi.local Port 80</address>
   </section>
 
   <!-- The open box and Alexa. -->
@@ -87,7 +89,7 @@
           <button id="ask-mic" type="button" class="mic" aria-label="Talk to Alexa" aria-pressed="false">
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 14.5a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5.5a3 3 0 0 0 3 3Z" fill="currentColor"/><path d="M18 11.5a6 6 0 0 1-12 0M12 17.5V21M8.5 21h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
-          <button type="submit" class="btn btn--device">Ask</button>
+          <button type="submit" class="btn">Ask</button>
         </form>
       </aside>
     </div>
@@ -117,13 +119,13 @@
       <p id="reader-page" class="reader__page" aria-live="polite"></p>
       <footer class="reader__foot">
         <div class="reader__moves">
-          <button id="reader-reach" type="button" class="btn btn--paper" hidden></button>
-          <button id="reader-prev" type="button" class="btn btn--quiet">Previous page</button>
-          <button id="reader-turn" type="button" class="btn btn--paper">Turn it over</button>
-          <button id="reader-next" type="button" class="btn btn--paper">Next page</button>
+          <button id="reader-reach" type="button" class="btn" hidden></button>
+          <button id="reader-prev" type="button" class="btn">Previous page</button>
+          <button id="reader-turn" type="button" class="btn">Turn it over</button>
+          <button id="reader-next" type="button" class="btn">Next page</button>
         </div>
         <div class="reader__tools">
-          <button id="reader-zoom" type="button" class="btn btn--quiet" aria-pressed="false">Look closer</button>
+          <button id="reader-zoom" type="button" class="btn" aria-pressed="false">Look closer</button>
         </div>
       </footer>
     </div>
@@ -138,7 +140,7 @@
       <h3 class="ending__subhead" id="ending-count"></h3>
       <ul id="ending-items" class="ending__items"></ul>
       <p class="ending__actions">
-        <button id="again" type="button" class="btn btn--paper">Play again</button>
+        <button id="again" type="button" class="btn">Play again</button>
       </p>
     </div>
   </section>
@@ -159,12 +161,10 @@
       <p id="setup-about" class="setup__about">This game works best with a microphone and speakers: Alexa talks, and you can talk back to her.</p>
       <div class="setup__choices">
         <button id="setup-voice" type="button" class="setup__choice setup__choice--voice">
-          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M12 14.5a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5.5a3 3 0 0 0 3 3Z" fill="currentColor"/><path d="M18 11.5a6 6 0 0 1-12 0M12 17.5V21M8.5 21h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           <span class="setup__name">Microphone and speakers</span>
           <span class="setup__what">Hear Alexa, and talk to her. On a keyboard, hold Space to talk from anywhere.</span>
         </button>
         <button id="setup-text" type="button" class="setup__choice">
-          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6 10h1.5M10 10h1.5M14 10h1.5M18 10h.5M7.5 14h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           <span class="setup__name">Keyboard and text</span>
           <span class="setup__what">Read Alexa’s replies and type yours. You can turn her voice on later.</span>
         </button>

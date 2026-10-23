@@ -1,6 +1,6 @@
 # Handover: the browser demo of Open the Chicken Coop
 
-Written on 21 October 2026 for the next chat that works on this repo, updated the same day once the real box turned out to be gone, and on 22 October 2026 once things could be handled in hand. It covers what the demo is, what the owner wants from it, how it is built, how to test a change, and what is queued next. Everything below is on `main` and live.
+Written on 21 October 2026 for the next chat that works on this repo, updated the same day once the real box turned out to be gone, on 22 October 2026 once things could be handled in hand, and on 23 October 2026 once the page took on its hastily made look. It covers what the demo is, what the owner wants from it, how it is built, how to test a change, and what is queued next. Everything below is on `main` and live.
 
 - **Live demo:** https://richdurham.github.io/chickencoop/demo/ (GitHub Pages, deployed from `main`)
 - **Repo:** `richdurham/chickencoop`. The demo is in `demo/`, and tools and tests are in `tools/`.
@@ -20,6 +20,15 @@ Written on 21 October 2026 for the next chat that works on this repo, updated th
 ## What the owner wants (keep these)
 
 - **It's a demo of the real box,** so it should feel like handling the real things.
+- **The page looks hastily made,** as if someone threw it together with the browser's defaults. The owner chose this from mockups, and `demo/style.css` keeps it that way:
+  - **The page:** white, with Times New Roman text and flush left.
+  - **Controls:** the browser's own buttons and text boxes, and plain blue links for "Start over" and "Go back to the box you already opened".
+  - **Alexa's panel:** a plain bordered box, with her replies as a transcript ("Alexa:", "You:") rather than chat bubbles.
+  - **The two exceptions:**
+    - the title, in Permanent Marker, which echoes the marker writing on the lid;
+    - a fake web server line under the intro: "Apache/2.4.58 (Ubuntu) Server at titirangi.local Port 80", like the signature on a server's error page.
+  - **The box and Katie's things keep their looks,** since they're the game.
+  - **On phones,** the main buttons are a little taller, so they're easy to tap.
 - **The game never helps.** The box is full of red herrings, and players are meant to poke at everything because they don't know what matters. Nothing on screen may hint at what matters:
   - **Everything flat turns over,** even when its back is blank. Only the solid things (kete, plant, glasses, mug) don't, and nor does the lid, whose top is seen on the closed box.
   - **Names and captions are neutral.** The `label` is visible; the `caption` is only heard by screen readers. Both say what a thing is, never what to notice.
@@ -41,6 +50,7 @@ The demo is a static site: plain HTML, CSS and JavaScript, no build step. Jekyll
 | File | What it does |
 |---|---|
 | `demo/index.html` | The page: intro, box, Alexa's panel, the in-hand reader, the first-visit setup dialog, subtitles and the ending. Scripts load in order: data, understand, voice, game, meaning (a module). |
+| `demo/style.css` | The look (see "The page looks hastily made" above), plus how the box, the pile and the thing in hand are drawn. |
 | `demo/data.js` | All the content. The header comments explain every field. See the list below the table. |
 | `demo/game.js` | The game. See the list below the table. |
 | `demo/understand.js` | Matching a question to an answer. The sentence model first finds the item a question is about (by `label`, `name` and `about`), then scores every answer by its closest example, nudging answers the item `links` to. The result is an answer, a hedge, an unknown-item line or a fallback. Word matching (`keys`) is used until the model is ready, or if it can't run. |

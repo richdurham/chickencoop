@@ -1,31 +1,13 @@
 /* Open the Chicken Coop — browser demo.
-   The table is bush green under one lamp; Katie's things sit on it as prints. */
+   The page looks as if someone made it in a hurry: the browser's own white
+   page, Times, buttons, text boxes and blue links. Only the title has a font
+   of its own, and the intro ends with a web server's signature, as on its
+   error pages. Katie's things and her box keep their looks: they're the game. */
 
 :root {
-  --table: #17231D;
-  --table-deep: #0C140F;
-  --lamp: rgba(255, 212, 150, 0.13);
-
-  --manila: #D7C296;
-  --print: #F1EEE6;
-  --ink: #24211C;
-
-  --chalk: #E8E2D2;
-  --chalk-dim: #A3AA9B;
-
-  --device: #192A31;
-  --device-2: #213740;
-  --device-edge: #30505A;
-  --voice: #C6DBDD;
-  --voice-dim: #86A3A8;
-  --signal: #7CC6B9;
-
-  --focus: #F2D27A;
-
-  --serif: 'Newsreader', 'Iowan Old Style', Georgia, serif;
-  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-
-  --rail-h: 3.25rem;
+  --line: #767676;   /* the grey of the browser's own text boxes */
+  --title: 'Permanent Marker', 'Marker Felt', 'Comic Sans MS', cursive;
+  --rail-h: 3rem;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -35,28 +17,10 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   margin: 0;
-  min-height: 100vh;
-  min-height: 100dvh;
-  color: var(--chalk);
-  background-color: var(--table);
-  background-image:
-    radial-gradient(ellipse 70% 55% at 38% 30%, var(--lamp), transparent 70%),
-    radial-gradient(ellipse 120% 90% at 50% 40%, transparent 55%, var(--table-deep) 100%),
-    repeating-linear-gradient(93deg, rgba(255,255,255,0.012) 0 2px, transparent 2px 7px);
-  background-attachment: fixed;
-  font-family: var(--serif);
-  font-size: 1rem;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
+  font-family: 'Times New Roman', Times, serif;
 }
 
-button, input { font: inherit; color: inherit; }
 img { display: block; max-width: 100%; }
-
-:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 3px;
-}
 
 .sr-only {
   position: absolute;
@@ -68,137 +32,71 @@ img { display: block; max-width: 100%; }
   border: 0;
 }
 
-/* ---------- Buttons ---------- */
+/* ---------- Buttons and text boxes: the browser's own ---------- */
 
-.btn {
-  cursor: pointer;
-  border: 0;
-  border-radius: 3px;
-  padding: 0.6rem 1rem;
-  font-family: var(--mono);
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.2;
-  white-space: nowrap;
-  transition: transform 120ms ease, background-color 120ms ease;
-}
-.btn:active { transform: translateY(1px); }
-.btn:disabled { opacity: 0.4; cursor: default; }
+/* 16px text keeps phones from zooming in when a text box is tapped. */
+.say__input, .ask__input { font-size: 16px; }
 
-.btn--paper {
-  background: var(--manila);
-  color: var(--ink);
-  box-shadow: 0 1px 0 rgba(0,0,0,0.25), inset 0 -2px 0 rgba(0,0,0,0.12);
-}
-.btn--paper:hover { background: #E2CFA6; }
+.btn { white-space: nowrap; }
 
-.btn--device {
-  background: var(--device-edge);
-  color: var(--voice);
-  border-radius: 999px;
-}
-.btn--device:hover { background: #3A606B; }
-
+/* Quiet buttons are links. */
 .btn--quiet {
-  background: transparent;
-  color: var(--chalk-dim);
-  padding-inline: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: #00e;  /* the browser's own link blue */
   text-decoration: underline;
-  text-decoration-color: rgba(163,170,155,0.4);
-  text-underline-offset: 0.25em;
+  cursor: pointer;
 }
-.btn--quiet:hover:not(:disabled) { color: var(--chalk); }
+
+/* Talking out loud: a microphone beside each text box. It turns red while listening. */
+.mic {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+}
+.mic svg { width: 18px; height: 18px; }
+.mic.is-listening { color: red; }
+.mic.is-busy { opacity: 0.6; cursor: progress; }
 
 /* ---------- Intro: the closed box ---------- */
 
-.intro {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-  align-items: center;
-  gap: clamp(2rem, 6vw, 6rem);
-  padding: clamp(1.5rem, 6vw, 6rem);
-  max-width: 82rem;
-  margin: 0 auto;
+.intro { padding: 8px; }
+
+.intro__title {
+  margin: 0.15em 0 0.3em;
+  font-family: var(--title);
+  font-weight: 400;
+  font-size: clamp(2.75rem, 8vw, 6.5rem);
+  line-height: 1.1;
 }
 
 .intro__photo {
   margin: 0;
-  justify-self: center;
-  width: min(32rem, 100%);
-  padding: 0.6rem 0.6rem 1.8rem;
-  background: var(--print);
-  box-shadow: 0 30px 50px -18px rgba(0,0,0,0.75), 0 2px 4px rgba(0,0,0,0.3);
-  transform: rotate(-2.5deg);
-  transition: transform 800ms cubic-bezier(.2,.7,.2,1), opacity 500ms ease 250ms;
+  width: 360px;
+  max-width: 100%;
+  transition: opacity 500ms ease 250ms;
 }
 .intro__photo img { width: 100%; height: auto; }
+.intro.is-opening .intro__photo { opacity: 0; }
 
-.intro.is-opening .intro__photo {
-  transform: rotate(0deg) translateY(-24px) scale(1.04);
-  opacity: 0;
-}
+.intro__lede { max-width: 40em; }
 
-.intro__title {
-  margin: 0 0 1.5rem;
-  font-style: italic;
-  font-weight: 400;
-  font-optical-sizing: auto;
-  font-size: clamp(2.6rem, 6.2vw, 5rem);
-  line-height: 0.98;
-  letter-spacing: -0.02em;
-  text-indent: -0.42em;
-}
-
-.intro__lede {
-  margin: 0 0 2.25rem;
-  max-width: 34em;
-  font-size: 1.1875rem;
-  line-height: 1.6;
-  color: #D6D2C3;
-}
-
-.say { max-width: 32rem; }
-
-.say__label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-  color: var(--chalk-dim);
-}
+.say__label { display: block; margin-bottom: 4px; }
 
 .say__row {
   display: flex;
-  gap: 0.5rem;
-  align-items: stretch;
+  gap: 4px;
+  align-items: center;
+  max-width: 100%;
 }
+.say__input { flex: 0 1 20em; min-width: 0; }
+.say__row > button { flex: none; }
 
-.say__input {
-  flex: 1;
-  min-width: 0;
-  background: rgba(0,0,0,0.25);
-  border: 0;
-  border-bottom: 2px solid rgba(232,226,210,0.35);
-  border-radius: 3px 3px 0 0;
-  padding: 0.7rem 0.8rem;
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 1.25rem;
-  color: var(--chalk);
-}
-.say__input::placeholder { color: rgba(232,226,210,0.32); }
-.say__input:focus { outline: none; border-bottom-color: var(--focus); }
+.say__reply { min-height: 1.2em; }
 
-.say__reply {
-  min-height: 3em;
-  margin: 1rem 0 0;
-  font-size: 1.0625rem;
-  color: var(--voice);
-}
-
-.intro__resume { margin: 0.5rem 0 0; }
+.intro__server { margin-top: 0.5em; }
 
 /* ---------- Game layout ---------- */
 
@@ -213,25 +111,12 @@ img { display: block; max-width: 100%; }
   flex: 0 0 var(--rail-h);
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding: 0 clamp(1rem, 3vw, 2rem);
-  border-bottom: 1px solid rgba(232,226,210,0.1);
+  gap: 1em;
+  padding: 0 8px;
+  border-bottom: 1px solid gray;
 }
-
-.rail__title {
-  margin: 0;
-  font-style: italic;
-  font-size: 1.125rem;
-}
-
-.rail__progress {
-  margin: 0 0 0 auto;
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-  color: var(--chalk-dim);
-}
-
-.rail__reset { font-size: 0.8125rem; }
+.rail__title { margin: 0; font-weight: bold; }
+.rail__progress { margin: 0 0 0 auto; }
 
 .tabs { display: none; }
 
@@ -249,7 +134,7 @@ img { display: block; max-width: 100%; }
   position: relative;
   display: grid;
   place-items: center;
-  padding: clamp(0.75rem, 2vw, 1.5rem);
+  padding: 8px;
   overflow: hidden;
 }
 
@@ -290,12 +175,9 @@ img { display: block; max-width: 100%; }
   margin: 0;
   width: max-content;
   max-width: 92%;
-  padding: 0.35rem 0.8rem;
-  border-radius: 999px;
-  background: rgba(12,20,15,0.82);
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--chalk);
+  padding: 0 4px;
+  background: #fff;
+  font-size: 0.875em;
   text-align: center;
   pointer-events: none;
   z-index: 900;
@@ -388,29 +270,22 @@ img { display: block; max-width: 100%; }
   z-index: 20;
   display: grid;
   place-items: center;
-  padding: 1rem;
+  padding: 8px;
 }
 
 .reader__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(6, 11, 8, 0.86);
-  backdrop-filter: blur(2px);
+  background: #fff;
 }
 
 .reader__sheet {
   position: relative;
   width: min(62rem, 100%);
-  height: calc(100dvh - 2rem);
+  height: calc(100dvh - 16px);
   max-height: 62rem;
   display: flex;
   flex-direction: column;
-  animation: lift 260ms cubic-bezier(.2,.8,.25,1);
-}
-
-@keyframes lift {
-  from { opacity: 0; transform: translateY(18px) scale(0.96); }
-  to   { opacity: 1; transform: none; }
 }
 
 .reader__head {
@@ -418,37 +293,15 @@ img { display: block; max-width: 100%; }
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
-  padding: 0 0.25rem 0.75rem;
+  padding-bottom: 8px;
 }
 
-.reader__title {
-  margin: 0;
-  font-weight: 500;
-  font-size: 1.375rem;
-  line-height: 1.2;
-}
+.reader__title { margin: 0; }
 
-.reader__credit {
-  margin: 0.3rem 0 0;
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--chalk-dim);
-}
-.reader__credit a { color: inherit; text-underline-offset: 0.2em; }
+.reader__credit { margin: 4px 0 0; font-size: 0.875em; }
 
-.reader__x {
-  flex: none;
-  cursor: pointer;
-  width: 2.5rem;
-  height: 2.5rem;
-  border: 1px solid rgba(232,226,210,0.25);
-  border-radius: 50%;
-  background: transparent;
-  font-size: 1.5rem;
-  line-height: 1;
-  color: var(--chalk);
-}
-.reader__x:hover { background: rgba(232,226,210,0.08); }
+.reader__actions { flex: none; display: flex; gap: 4px; align-items: center; }
+.reader__x { font-size: 1.25em; }
 
 /* The game handles every touch here itself: moving, rotating, zooming. */
 .reader__view {
@@ -494,7 +347,7 @@ img { display: block; max-width: 100%; }
   -webkit-user-select: none;
   -webkit-user-drag: none;
   -webkit-touch-callout: none;
-  filter: drop-shadow(0 26px 30px rgba(0,0,0,0.6));
+  filter: drop-shadow(0 12px 18px rgba(0,0,0,0.35));
 }
 
 /* --spin adds up half a turn at a time, in whichever direction it was flicked. */
@@ -547,26 +400,15 @@ img { display: block; max-width: 100%; }
   z-index: 3;
   width: max-content;
   margin-inline: auto;
-  padding: 0.45rem 0.9rem;
-  border: 1px solid rgba(232,226,210,0.25);
-  border-radius: 999px;
-  background: rgba(12,20,15,0.86);
-  color: var(--chalk);
-  font-size: 0.8125rem;
-  box-shadow: 0 8px 18px -8px rgba(0,0,0,0.7);
 }
-.reader__straight:hover { background: rgba(28,40,32,0.92); }
 
 /* The same width saying "Look closer" or "Step back", so the buttons never shift. */
-#reader-zoom { min-width: calc(11ch + 0.5rem); }
+#reader-zoom { min-width: calc(11ch + 1rem); }
 
 .reader__page {
-  min-height: 1.4em;
-  margin: 0.75rem 0 0;
+  min-height: 1.2em;
+  margin: 8px 0 0;
   text-align: center;
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-  color: var(--chalk);
 }
 
 .reader__foot {
@@ -574,20 +416,15 @@ img { display: block; max-width: 100%; }
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 0.75rem 1.25rem;
-  padding-top: 0.75rem;
+  gap: 8px 1rem;
+  padding-top: 8px;
 }
 
-.reader__moves {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
+.reader__moves,
 .reader__tools {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 4px;
 }
 
 /* ---------- Alexa ---------- */
@@ -596,56 +433,32 @@ img { display: block; max-width: 100%; }
   min-height: 0;
   display: flex;
   flex-direction: column;
-  margin: 1rem clamp(1rem, 2vw, 1.5rem) 1rem 0;
-  background:
-    radial-gradient(ellipse 120% 50% at 50% 0, rgba(124,198,185,0.07), transparent 70%),
-    var(--device);
-  border: 1px solid var(--device-edge);
-  border-radius: 18px;
-  box-shadow: 0 24px 40px -20px rgba(0,0,0,0.8);
-  color: var(--voice);
+  margin: 8px 8px 8px 0;
+  border: 1px solid var(--line);
   overflow: hidden;
 }
 
 .alexa__head {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.9rem 1.25rem;
-  border-bottom: 1px solid rgba(134,163,168,0.18);
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
 }
 
-.alexa__face {
-  flex: none;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 50%;
-  overflow: hidden;
-  box-shadow: 0 0 0 2px var(--device-edge);
-}
+.alexa__face { flex: none; width: 48px; height: 48px; }
 .alexa__face img { width: 100%; height: 100%; object-fit: cover; }
-.alexa__face.is-speaking {
-  animation: pulse 900ms ease-in-out infinite alternate;
-}
-@keyframes pulse {
-  from { box-shadow: 0 0 0 2px var(--signal), 0 0 0 2px rgba(124,198,185,0.5); }
-  to   { box-shadow: 0 0 0 2px var(--signal), 0 0 0 7px rgba(124,198,185,0); }
-}
+.alexa__face.is-speaking { outline: 2px solid; outline-offset: 2px; }
 
-.alexa__name {
-  margin: 0;
-  font-size: 1.125rem;
-  font-weight: 500;
-  line-height: 1.2;
-  color: #E4EEEE;
-}
+.alexa__name { margin: 0; font-weight: bold; }
+.alexa__sub { margin: 0; font-size: 0.875em; }
 
-.alexa__sub {
-  margin: 0;
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--voice-dim);
-}
+/* Alexa's voice: on or off. */
+.alexa__voice { margin-left: auto; flex: none; }
+.alexa__voice svg { display: block; width: 18px; height: 18px; }
+.alexa__voice .icon-off,
+.alexa__voice.is-off .icon-on { display: none; }
+.alexa__voice.is-off .icon-off { display: block; }
 
 .log {
   flex: 1;
@@ -653,130 +466,47 @@ img { display: block; max-width: 100%; }
   overflow-y: auto;
   list-style: none;
   margin: 0;
-  padding: 1.25rem;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  scrollbar-color: rgba(134,163,168,0.3) transparent;
+  gap: 0.75em;
 }
 
-.msg { max-width: 92%; }
-
-.msg--her {
-  align-self: flex-start;
-  font-size: 1.0625rem;
-  line-height: 1.5;
-  color: var(--voice);
-}
-
-.msg--you {
-  align-self: flex-end;
-  max-width: 80%;
-  padding: 0.45rem 0.75rem;
-  background: var(--device-2);
-  border-radius: 12px 12px 3px 12px;
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  color: #DCE8E9;
-}
-
-.msg--code {
-  border: 1px solid rgba(242,210,122,0.45);
-  color: #F3E3B4;
-}
+/* A plain transcript: who said it, then what they said. */
+.msg--her::before { content: 'Alexa: '; font-weight: bold; }
+.msg--you::before { content: 'You: '; font-weight: bold; }
 
 .msg--typing {
   display: flex;
-  gap: 0.3rem;
-  padding: 0.4rem 0;
+  gap: 4px;
+  padding: 0.4em 0;
 }
 .msg--typing span {
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 50%;
-  background: var(--voice-dim);
+  width: 4px;
+  height: 4px;
+  background: currentColor;
   animation: dot 1s ease-in-out infinite;
 }
 .msg--typing span:nth-child(2) { animation-delay: 150ms; }
 .msg--typing span:nth-child(3) { animation-delay: 300ms; }
 @keyframes dot {
-  0%, 100% { opacity: 0.25; transform: translateY(0); }
-  50% { opacity: 1; transform: translateY(-2px); }
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
 }
 
 .ask {
   display: flex;
-  gap: 0.5rem;
-  padding: 0 1rem 1rem;
+  gap: 4px;
+  align-items: center;
+  padding: 8px;
+  border-top: 1px solid var(--line);
 }
-
-.ask__input {
-  flex: 1;
-  min-width: 0;
-  background: rgba(0,0,0,0.22);
-  border: 1px solid rgba(134,163,168,0.25);
-  border-radius: 999px;
-  padding: 0.55rem 0.95rem;
-  font-family: var(--mono);
-  font-size: 0.875rem;
-  color: #E4EEEE;
-}
-.ask__input::placeholder { color: rgba(198,219,221,0.4); }
-.ask__input:focus { outline: none; border-color: var(--signal); }
-
-/* Talking out loud: a microphone beside each text box. It glows while listening. */
-.mic {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: var(--device-edge);
-  color: var(--voice);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background-color 120ms ease, color 120ms ease;
-}
-.mic:hover { background: #3A606B; }
-.mic:disabled { opacity: 0.4; cursor: default; }
-.mic.is-listening {
-  background: var(--signal);
-  color: var(--device);
-  animation: listening 1100ms ease-out infinite;
-}
-.mic.is-busy { opacity: 0.6; cursor: progress; }
-@keyframes listening {
-  from { box-shadow: 0 0 0 0 rgba(124,198,185,0.6); }
-  to   { box-shadow: 0 0 0 10px rgba(124,198,185,0); }
-}
-
-/* On the closed box, it sits with the paper "Say it" button. */
-.mic--paper {
-  width: 3rem;
-  border-radius: 3px;
-  background: rgba(0,0,0,0.25);
-  color: var(--chalk);
-}
-.mic--paper:hover { background: rgba(0,0,0,0.4); }
-.mic--paper.is-listening { background: var(--manila); color: var(--ink); }
-
-/* In the head of the thing in hand, beside "put it back". */
-.reader__actions { flex: none; display: flex; gap: 0.5rem; }
-.reader__mic {
-  width: 2.5rem;
-  height: 2.5rem;
-  background: transparent;
-  border: 1px solid rgba(232,226,210,0.25);
-  color: var(--chalk);
-}
-.reader__mic:hover { background: rgba(232,226,210,0.08); }
-.reader__mic.is-listening { border-color: transparent; }
+.ask__input { flex: 1; min-width: 0; }
+.ask > button { flex: none; }
 
 /* On a phone's box tab, floating over the corner of the table. */
 .box__mic { display: none; }
+.box__mic svg { width: 24px; height: 24px; }
 
 /* Subtitles: who said what, while Alexa's panel is out of sight. game.js sets
    bottom to sit above the buttons of the thing in hand. */
@@ -790,29 +520,17 @@ img { display: block; max-width: 100%; }
   max-width: min(36rem, calc(100vw - 2rem));
   max-height: 40vh;
   overflow-y: auto;
-  padding: 0.65rem 1rem 0.75rem;
-  border-radius: 12px;
-  background: rgba(12,22,26,0.94);
-  border: 1px solid var(--device-edge);
-  box-shadow: 0 16px 30px -12px rgba(0,0,0,0.7);
-  color: var(--voice);
+  padding: 4px 8px;
+  background: #fff;
+  border: 1px solid;
   pointer-events: none;
-  animation: fadein 160ms ease both;
 }
-.subtitle__who {
-  display: block;
-  font-family: var(--mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--voice-dim);
-}
+.subtitle__who { display: block; font-size: 0.875em; font-weight: bold; }
 .subtitle__who:empty { display: none; }
-.subtitle__text { display: block; font-size: 1.0625rem; line-height: 1.4; }
-.subtitle--you .subtitle__text { font-style: italic; color: #E4EEEE; }
-.subtitle--note .subtitle__text { font-family: var(--mono); font-size: 0.875rem; }
+.subtitle__text { display: block; }
+.subtitle--you .subtitle__text { font-style: italic; }
 
-/* First visit: talk or type. */
+/* First visit: talk or type. It looks like the browser's own dialog box. */
 .setup {
   position: fixed;
   inset: 0;
@@ -820,239 +538,101 @@ img { display: block; max-width: 100%; }
   display: grid;
   place-items: center;
   padding: 1rem;
-  background: rgba(6, 11, 8, 0.86);
-  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.1);
 }
 .setup__card {
   width: min(34rem, 100%);
   max-height: calc(100dvh - 2rem);
   overflow-y: auto;
-  padding: clamp(1.25rem, 4vw, 2rem);
-  border-radius: 18px;
-  background:
-    radial-gradient(ellipse 120% 50% at 50% 0, rgba(124,198,185,0.08), transparent 70%),
-    var(--device);
-  border: 1px solid var(--device-edge);
-  box-shadow: 0 24px 40px -20px rgba(0,0,0,0.8);
-  color: var(--voice);
-  animation: lift 260ms cubic-bezier(.2,.8,.25,1);
+  padding: 1em;
+  border: 3px solid;
+  background: #fff;
 }
-.setup__title { margin: 0; font-weight: 500; font-size: 1.5rem; color: #E4EEEE; }
-.setup__about { margin: 0.5rem 0 1.25rem; font-size: 1.0625rem; line-height: 1.45; }
-.setup__choices { display: grid; gap: 0.75rem; }
-.setup__choice {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 0.85rem;
-  align-items: start;
-  width: 100%;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--device-edge);
-  border-radius: 12px;
-  background: rgba(0,0,0,0.18);
-  color: var(--voice);
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease;
-}
-.setup__choice:hover { background: rgba(124,198,185,0.08); border-color: var(--signal); }
-.setup__choice svg { grid-row: span 2; margin-top: 0.1rem; color: var(--voice-dim); }
-.setup__choice--voice { border-color: var(--signal); }
-.setup__choice--voice svg { color: var(--signal); }
-.setup__name { font-family: var(--mono); font-size: 0.9375rem; font-weight: 500; color: #E4EEEE; }
-.setup__what { margin-top: 0.2rem; font-size: 0.9375rem; line-height: 1.4; color: var(--voice-dim); }
-.setup__note { min-height: 1.4em; margin: 1rem 0 0; font-family: var(--mono); font-size: 0.8125rem; color: var(--focus); }
+.setup__title { margin: 0; }
+.setup__choices { display: grid; gap: 8px; }
+.setup__choice { display: block; width: 100%; text-align: left; padding: 6px 8px; }
+.setup__name { display: block; font-weight: bold; }
+.setup__what { display: block; margin-top: 2px; }
+.setup__note { min-height: 1.2em; margin: 1em 0 0; }
 .setup__note:empty { margin: 0; min-height: 0; }
-
-/* Alexa's voice: on or off. */
-.alexa__voice {
-  margin-left: auto;
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--voice-dim);
-  cursor: pointer;
-}
-.alexa__voice:hover { color: var(--voice); background: rgba(134,163,168,0.12); }
-.alexa__voice .icon-off,
-.alexa__voice.is-off .icon-on { display: none; }
-.alexa__voice.is-off .icon-off { display: block; }
 
 /* ---------- Ending ---------- */
 
-.ending {
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding: clamp(2rem, 8vw, 6rem) clamp(1rem, 5vw, 3rem);
-  animation: fadein 900ms ease both;
-}
-@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+.ending { padding: 8px; }
 
-.ending__col {
-  max-width: 40rem;
-  margin: 0 auto;
-}
-
-.ending__kicker {
-  margin: 0 0 0.6rem;
-  font-family: var(--mono);
-  font-size: 0.875rem;
-  color: var(--chalk-dim);
-}
-
-.ending__title {
-  margin: 0 0 2rem;
-  font-weight: 400;
-  font-style: italic;
-  font-size: clamp(2.4rem, 6vw, 4rem);
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
+.ending__title { font-size: 2em; }
 .ending__title:focus { outline: none; }
 
-.ending__alexa {
-  margin: 0 0 3rem;
-  padding: 1.1rem 1.3rem;
-  background: var(--device);
-  border: 1px solid var(--device-edge);
-  border-radius: 14px;
-  color: var(--voice);
-  font-size: 1.1875rem;
-  line-height: 1.55;
-}
-.ending__alexa cite {
-  display: block;
-  margin-top: 0.5rem;
-  font-style: normal;
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--voice-dim);
-}
-
-.ending__subhead {
-  margin: 0 0 1rem;
-  font-weight: 500;
-  font-size: 1.25rem;
-}
+.ending__alexa cite { display: block; margin-top: 0.5em; }
 
 .ending__items {
   list-style: none;
-  margin: 0 0 2.5rem;
   padding: 0;
-  border-top: 1px solid rgba(232,226,210,0.12);
 }
 
 .ending__items li {
   display: grid;
-  grid-template-columns: 6.5rem minmax(0, 1fr);
+  grid-template-columns: 7rem minmax(0, 1fr);
   gap: 1rem;
-  padding: 0.55rem 0;
-  border-bottom: 1px solid rgba(232,226,210,0.12);
+  padding: 2px 0;
 }
 
-.seen__state {
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  padding-top: 0.2rem;
-  color: var(--chalk-dim);
-}
-.seen--yes .seen__state { color: var(--signal); }
-.seen--no { color: var(--chalk-dim); }
+.seen--no { color: gray; }
 
-/* ---------- Small screens ---------- */
+/* ---------- Phones and tablets ---------- */
+
+/* Room for a fingertip on the buttons used most. */
+@media (max-width: 860px), (pointer: coarse) {
+  .mic, .btn:not(.btn--quiet), .reader__x, .alexa__voice, .tabs__tab { min-height: 2.5rem; }
+  .mic, .reader__x, .alexa__voice { min-width: 2.75rem; }
+}
 
 @media (max-width: 860px) {
-  .intro {
-    grid-template-columns: minmax(0, 1fr);
-    align-content: start;
-    gap: 2.5rem;
-    padding: 2.5rem 1rem 3rem;
-  }
-  .intro__photo { width: min(24rem, 92%); }
-  .intro__title { text-indent: -0.3em; padding-left: 0.3em; }
-  .intro__lede { font-size: 1.0625rem; }
+  .intro { padding-bottom: 24px; }
+  .say__input { flex: 1 1 auto; }
 
-  .rail { gap: 0.75rem; padding: 0 1rem; }
-  .rail__title { font-size: 1rem; }
-  .rail__progress { font-size: 0.75rem; }
+  .rail { gap: 0.75em; }
 
   .tabs {
     display: flex;
-    gap: 0.25rem;
-    padding: 0.5rem 1rem 0;
+    gap: 4px;
+    padding: 4px 8px 0;
   }
-  .tabs__tab {
-    flex: 1;
-    cursor: pointer;
-    border: 0;
-    border-bottom: 2px solid transparent;
-    background: none;
-    padding: 0.55rem 0.5rem;
-    font-family: var(--mono);
-    font-size: 0.875rem;
-    color: var(--chalk-dim);
-  }
-  .tabs__tab[aria-selected="true"] {
-    color: var(--chalk);
-    border-bottom-color: var(--manila);
-  }
-  .tabs__new {
-    margin-left: 0.35rem;
-    padding: 0.05rem 0.4rem;
-    border-radius: 999px;
-    background: var(--signal);
-    color: var(--table-deep);
-    font-size: 0.6875rem;
-  }
+  .tabs__tab { flex: 1 1 0; }
+  .tabs__tab[aria-selected="true"] { font-weight: bold; }
+  .tabs__new::before { content: '('; }
+  .tabs__new::after { content: ')'; }
 
   .stage { display: block; position: relative; }
   .stage > .box { height: 100%; }
-  .stage > .alexa { height: calc(100% - 1.5rem); }
+  .stage > .alexa { height: calc(100% - 16px); }
   .stage[data-view="box"] > .alexa,
   .stage[data-view="alexa"] > .box { display: none; }
 
-  .box { padding: 0.5rem; }
   .desk { --wall: 9px; }
   .box__mic {
-    display: grid;
+    display: inline-grid;
     position: absolute;
     right: 1rem;
     bottom: calc(1rem + env(safe-area-inset-bottom));
     z-index: 2;
     width: 3.25rem;
     height: 3.25rem;
-    box-shadow: 0 10px 20px -8px rgba(0,0,0,0.7);
   }
 
-  .alexa { margin: 0.75rem; border-radius: 14px; }
-  .alexa__head { padding: 0.75rem 1rem; }
-  .log { padding: 1rem; }
-  .ask { padding: 0 0.75rem 0.75rem; }
-  .ask__input { font-size: 1rem; } /* 16px keeps iOS from zooming on focus */
+  .alexa { margin: 8px; }
 
-  .reader { padding: 0.5rem; }
-  .reader__sheet { height: calc(100dvh - 1rem); }
-  .reader__title { font-size: 1.125rem; }
+  .reader__sheet { height: calc(100dvh - 16px); }
+  .reader__title { font-size: 1.25em; }
   .reader__foot { justify-content: center; }
 
-  .ending__items li { grid-template-columns: minmax(0, 1fr); gap: 0.1rem; }
+  .ending__items li { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 4px 0; }
 }
 
 @media (max-width: 420px) {
   .rail__title { display: none; }
   .rail__progress { margin-left: 0; }
   .rail__reset { margin-left: auto; }
-  /* Room for the whole line, the microphone and "Say it" on one row. */
-  .say__row { gap: 0.375rem; }
-  .say__input { font-size: 1.0625rem; padding-inline: 0.6rem; }
-  .mic--paper { width: 2.5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
