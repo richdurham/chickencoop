@@ -144,6 +144,10 @@ node tools/tests/voice.js /tmp/shots-voice    # 101 checks, about 10 minutes: li
 
 Every check prints PASS or FAIL. The suites should be fully green, at 116, 18 and 101. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
 
+**Against the live site,** pictures and Alexa's model arrive slowly, so the suites don't rely on download speed:
+- **`box.js`** waits for the pictures on the table before looking for a spot on something. It also waits for the thing in hand to be fitted to its picture before measuring it; until the picture arrives, it keeps the size of whatever was held before.
+- **`voice.js`** has a check that asks a question while her model is still arriving. For that check it serves her model from the checkout, so the only delay is its deliberate 1.5 s, short of the 8 s she waits. From the live site, the real download alone could take longer than that.
+
 **Trying a branch on a phone before merging:** push it, then open `https://raw.githack.com/richdurham/chickencoop/<full commit id>/demo/index.html`. Use the commit id, not the branch name, because `claude/...` branch names have a slash in them.
 - **The first visit** shows a notice page from raw.githack.com, with an ad; "Open the page" goes through to the game, and later visits skip it.
 - **It's https,** so the microphone works and the browser keeps Alexa's model between visits, as on the live site.
