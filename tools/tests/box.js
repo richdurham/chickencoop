@@ -12,7 +12,9 @@ function check(cond, msg) {
 }
 
 // A point where this thing is actually on top of the pile (things overlap and tilt).
+// Things take their height from their pictures, so this waits for those to arrive.
 async function spot(page, id) {
+  await page.waitForFunction(() => [...document.querySelectorAll('.thing img')].every(i => i.complete));
   const pt = await page.evaluate(id => {
     const el = document.querySelector('.thing[data-item="' + id + '"]');
     const r = el.getBoundingClientRect();
@@ -62,7 +64,14 @@ async function pose(page) {
 }
 const within = (a, b, by) => Math.abs(a - b) <= by;
 const isStraight = p => p && within(p.x, 0, 1) && within(p.y, 0, 1) && within(p.a, 0, 0.5) && within(p.s, 1, 0.01);
+// The thing in hand is fitted to its picture once that arrives, which takes a moment on the live
+// site: until then it keeps the size of whatever was held before, or has none.
 async function handBox(page) {
+  await page.waitForFunction(() => {
+    const h = document.getElementById('hand');
+    const img = h.querySelector('.face--front img') || [...h.querySelectorAll('.page:not(.page--turning) img')].pop();
+    return img && img.complete && img.naturalWidth > 0 && h.offsetWidth > 0 && Math.abs(h.offsetWidth / h.offsetHeight - img.naturalWidth / img.naturalHeight) < 0.02;
+  });
   return page.$eval('#hand', h => { const r = h.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, left: r.left, right: r.right, top: r.top, w: r.width }; });
 }
 async function zoomedIn(page) { return page.$eval('#reader-view', v => v.classList.contains('is-zoomed')); }
@@ -285,7 +294,8 @@ async function say(page, text) {
   await dblclickAt(page, pg.left + pg.w * 0.1, pg.y);
   const leftSide = await page.textContent('#reader-page');
   await dblclickAt(page, pg.right - pg.w * 0.1, pg.y);
-  check(leftSide === 'NOVA Online printout, page 3 of 4' && (await page.textContent('#reader-page')) === 'NOVA Online printout, page 4 of 4', 'double-clicking the left side of a page turns back, the right side on');
+  const rightSide = await page.textContent('#reader-page');
+  check(leftSide === 'NOVA Online printout, page 3 of 4' && rightSide === 'NOVA Online printout, page 4 of 4', `double-clicking the left side of a page turns back, the right side on ("${leftSide}", then "${rightSide}")`);
   await page.waitForTimeout(400);
   await flick(page, pg, 80);
   check((await page.textContent('#reader-page')) === 'NOVA Online printout, page 3 of 4' && isStraight(await pose(page)), 'flicking to the right turns back a page');

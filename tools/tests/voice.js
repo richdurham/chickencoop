@@ -635,8 +635,15 @@ async function talk(page, mic, clipOrWords) {
   // ---------- N. A question in the first moments, before her sentence model is ready ----------
   {
     const page = await newPage(browser, { recognition: 'works' });
-    // A slower connection: the sentence model takes 2.5 s more to arrive.
-    await page.context().route('**/all-MiniLM-L6-v2/onnx/model_quantized.onnx', async r => { await new Promise(x => setTimeout(x, 2500)); await r.continue(); });
+    // A slower connection: the sentence model takes 1.5 s more to arrive. Her model and its
+    // runtime come from this checkout, so that's the only delay wherever the page is served
+    // from: from the live site, downloading them can take longer than she waits.
+    const types = { js: 'text/javascript', wasm: 'application/wasm', json: 'application/json' };
+    await page.context().route(/\/demo\/(lib|model)\//, async r => {
+      const file = r.request().url().split('?')[0].split('/demo/').pop();
+      if (file.endsWith('model_quantized.onnx')) await new Promise(x => setTimeout(x, 1500));
+      await r.fulfill({ path: __dirname + '/../../demo/' + file, contentType: types[file.split('.').pop()] || 'application/octet-stream' });
+    });
     await page.fill('#intro-input', 'Alexa, open the chicken coop');
     await page.click('#intro-form button[type="submit"]');
     await page.waitForSelector('#game:not([hidden])');
