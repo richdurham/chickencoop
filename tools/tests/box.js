@@ -409,6 +409,16 @@ async function say(page, text) {
     check(JSON.stringify(listed) === JSON.stringify(['Kete', 'Mug', 'Get-well card']) && (await p.textContent('#ending-count')) === 'Looked at: a few', `the ending lists only the few things looked at, and says "a few" (${listed.join(', ')})`);
     await c.close();
   }
+  {
+    // A device set to dark mode gets the browser's own dark page.
+    const c = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark', reducedMotion: 'reduce' });
+    await c.addInitScript(() => { try { localStorage.setItem('chickencoop-setup', 'text'); } catch (e) {} });
+    const p = await c.newPage(); watch(p, 'dark: ');
+    await p.goto(URL);
+    const text = await p.evaluate(() => getComputedStyle(document.body).color);
+    check(text === 'rgb(255, 255, 255)', `a device set to dark mode gets the browser’s own dark page (text ${text})`);
+    await c.close();
+  }
 
   // ---------- Phone ----------
   const m = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }); await m.addInitScript(() => { try { localStorage.setItem('chickencoop-setup', 'text'); } catch (e) {} }); // the first-visit choice was made

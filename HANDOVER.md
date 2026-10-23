@@ -22,6 +22,10 @@ Written on 21 October 2026 for the next chat that works on this repo, updated th
 - **It's a demo of the real box,** so it should feel like handling the real things.
 - **The page looks hastily made,** as if someone threw it together with the browser's defaults. The owner chose this from mockups, and `demo/style.css` keeps it that way:
   - **The page:** white, with Times New Roman text and flush left.
+  - **Dark mode:** it follows the player's device, as a page left on defaults would. Set to dark mode, players get the browser's own dark page and dark buttons. The owner wants this: it's the player's preference, and it adds to the hastily made feel.
+    - `<meta name="color-scheme" content="light dark">` in `index.html` does this.
+    - Colours in `style.css` use the browser's own names (`Canvas`, `LinkText`), so they follow along.
+    - Declaring dark support also stops browsers that darken websites themselves (Chrome's Auto Dark Mode, for one) from inverting things on the table: they turned the black glasses white and the coins into white blobs.
   - **Controls:** the browser's own buttons and text boxes, and plain blue links for "Start over" and "Go back to the box you already opened".
   - **Alexa's panel:** a plain bordered box, with her replies as a transcript ("Alexa:", "You:") rather than chat bubbles.
   - **The two exceptions:**
@@ -133,12 +137,12 @@ Playwright and Chromium are already installed in these cloud sessions. On the ow
 
 ```sh
 python3 -m http.server 8765 --bind 127.0.0.1 &
-node tools/tests/box.js /tmp/shots-box        # 115 checks: pile, handling in hand, turning over, leafing, kete/envelope, saving, "Looked at", the ending, phones
+node tools/tests/box.js /tmp/shots-box        # 116 checks: pile, handling in hand, turning over, leafing, kete/envelope, saving, "Looked at", the ending, dark mode, phones
 node tools/tests/answers.js /tmp/shots-ans    # 18 checks: plain-language answers, hedges, codes, word matching
 node tools/tests/voice.js /tmp/shots-voice    # 101 checks, about 10 minutes: listening, speaking, setup, hold Space, lid
 ```
 
-Every check prints PASS or FAIL. The suites should be fully green, at 115, 18 and 101. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
+Every check prints PASS or FAIL. The suites should be fully green, at 116, 18 and 101. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
 
 **Trying a branch on a phone before merging:** push it, then open `https://raw.githack.com/richdurham/chickencoop/<full commit id>/demo/index.html`. Use the commit id, not the branch name, because `claude/...` branch names have a slash in them.
 - **The first visit** shows a notice page from raw.githack.com, with an ad; "Open the page" goes through to the game, and later visits skip it.
