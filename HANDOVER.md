@@ -1,6 +1,6 @@
 # Handover: the browser demo of Open the Chicken Coop
 
-Written on 21 October 2026 for the next chat that works on this repo, and updated the same day once the real box turned out to be gone. It covers what the demo is, what the owner wants from it, how it is built, how to test a change, and what is queued next. Everything below is on `main` and live.
+Written on 21 October 2026 for the next chat that works on this repo, updated the same day once the real box turned out to be gone, on 22 October 2026 once things could be handled in hand, and on 23 October 2026 once the page took on its hastily made look. It covers what the demo is, what the owner wants from it, how it is built, how to test a change, and what is queued next. Everything below is on `main` and live.
 
 - **Live demo:** https://richdurham.github.io/chickencoop/demo/ (GitHub Pages, deployed from `main`)
 - **Repo:** `richdurham/chickencoop`. The demo is in `demo/`, and tools and tests are in `tools/`.
@@ -20,10 +20,23 @@ Written on 21 October 2026 for the next chat that works on this repo, and update
 ## What the owner wants (keep these)
 
 - **It's a demo of the real box,** so it should feel like handling the real things.
+- **The page looks hastily made,** as if someone threw it together with the browser's defaults. The owner chose this from mockups, and `demo/style.css` keeps it that way:
+  - **The page:** white, with Times New Roman text and flush left.
+  - **Dark mode:** it follows the player's device, as a page left on defaults would. Set to dark mode, players get the browser's own dark page and dark buttons. The owner wants this: it's the player's preference, and it adds to the hastily made feel.
+    - `<meta name="color-scheme" content="light dark">` in `index.html` does this.
+    - Colours in `style.css` use the browser's own names (`Canvas`, `LinkText`), so they follow along.
+    - Declaring dark support also stops browsers that darken websites themselves (Chrome's Auto Dark Mode, for one) from inverting things on the table: they turned the black glasses white and the coins into white blobs.
+  - **Controls:** the browser's own buttons and text boxes, and plain blue links for "Start over" and "Go back to the box you already opened".
+  - **Alexa's panel:** a plain bordered box, with her replies as a transcript ("Alexa:", "You:") rather than chat bubbles.
+  - **The two exceptions:**
+    - the title, in Permanent Marker, which echoes the marker writing on the lid;
+    - a fake web server line under the intro: "Apache/2.4.58 (Ubuntu) Server at titirangi.local Port 80", like the signature on a server's error page.
+  - **The box and Katie's things keep their looks,** since they're the game.
+  - **On phones,** the main buttons are a little taller, so they're easy to tap.
 - **The game never helps.** The box is full of red herrings, and players are meant to poke at everything because they don't know what matters. Nothing on screen may hint at what matters:
   - **Everything flat turns over,** even when its back is blank. Only the solid things (kete, plant, glasses, mug) don't, and nor does the lid, whose top is seen on the closed box.
   - **Names and captions are neutral.** The `label` is visible; the `caption` is only heard by screen readers. Both say what a thing is, never what to notice.
-  - **Progress is vague.** The line reads "Looked at: nothing / a few / some / many / most / all?". It's never a count, and never a plain "all": the owner deliberately frustrates completionists.
+  - **Progress is vague.** The line reads "Looked at: nothing / a few / some / many / most / all?". It's never a count, and never a plain "all": the owner deliberately frustrates completionists. The ending uses the same line, and lists only the things that were looked at, never the ones that weren't.
   - **No suggested questions anywhere.**
 - **The command codes are hidden.** They are written on two slips of paper at the bottom of the pile: "Release falcon 616" under the envelope and certificate, and "Destroy falcon 264" under the folder. They must never be shown as buttons or prompts in Alexa's panel, because players just click them. Saying a code is matched word for word. The short code gets "are you sure?", and the long one ("…cleansing falcon…") ends the game.
 - **Alexa's lines are the original Alexa Blueprint script, word for word,** apart from the coins answer, which the owner rewrote. They live in `demo/data.js` (`WELCOME`, `QA[].a`, `CODES`, `FALLBACKS`, `EXIT`, `START_HINT`). The owner will review them and may change some. Changed lines must then be re-recorded (see Voice below), and the owner may record some by hand.
@@ -41,6 +54,7 @@ The demo is a static site: plain HTML, CSS and JavaScript, no build step. Jekyll
 | File | What it does |
 |---|---|
 | `demo/index.html` | The page: intro, box, Alexa's panel, the in-hand reader, the first-visit setup dialog, subtitles and the ending. Scripts load in order: data, understand, voice, game, meaning (a module). |
+| `demo/style.css` | The look (see "The page looks hastily made" above), plus how the box, the pile and the thing in hand are drawn. |
 | `demo/data.js` | All the content. The header comments explain every field. See the list below the table. |
 | `demo/game.js` | The game. See the list below the table. |
 | `demo/understand.js` | Matching a question to an answer. The sentence model first finds the item a question is about (by `label`, `name` and `about`), then scores every answer by its closest example, nudging answers the item `links` to. The result is an answer, a hedge, an unknown-item line or a fallback. Word matching (`keys`) is used until the model is ready, or if it can't run. |
@@ -68,7 +82,29 @@ The demo is a static site: plain HTML, CSS and JavaScript, no build step. Jekyll
 **What `demo/game.js` does:**
 - **Saving:** state is kept in `localStorage` under `chickencoop-demo-v2`. It holds `started`, `opened`, `log`, `ending`, `fallback`, `layout`, `handled` and `out`.
 - **The pile:** drag to move a thing, tap or Enter to pick it up, arrow keys to nudge.
-- **In hand:** turning over (`flip`), leafing through (`leaf`), looking closer (`zoom`), and taking things out (`reachIn`).
+- **In hand:** turning over (`flip`), leafing through (`leaf`), and taking things out (`reachIn`). How it's held is `pose`: moved, rotated and zoomed, shown by `hold()` as a transform on `#grip`, around `#hand`, which does the turning over. None of it is saved; every pickup starts straight and fitted.
+  - **Handling it:**
+    - One finger or the mouse drags it.
+    - The mouse by a corner rotates it (the pointer changes there).
+    - Two fingers move, rotate and zoom it together.
+    - A quick sideways flick turns it over or turns the page, then springs back. Flicks don't count while it's wider than the view, where a quick drag is reading.
+    - A double-tap turns it over, turns the page (back a page on its left side), or looks closer at something solid.
+    - A single tap does nothing: it's where a drag starts.
+  - **Computers:**
+    - Scrolling reads down something bigger than the view.
+    - Ctrl+scroll zooms; a trackpad pinch arrives as Ctrl+scroll.
+    - Shift+scroll rotates.
+    - Safari's trackpad pinch and twist arrive as gesture events.
+  - **Keys:**
+    - F turns it over.
+    - R and Shift+R rotate it.
+    - + and − zoom.
+    - 0 puts it straight.
+    - Page Up and Page Down turn pages.
+    - The arrows turn it over or turn pages, except while looking closer, when they move it.
+  - **"Look closer"** makes it straight, at least twice its size and as wide as the view, and shows it from the top. Turning the page while looking closer starts the next page from the top.
+  - **"Put it straight"** floats over the view, so it never takes room from the thing. It shows only once the thing is tilted, moved or held further away.
+  - **Taking things out** of the kete or the envelope is still only ever the button.
 - **Opening:** the intro and the lid animation (`openLid`).
 - **Talking:** the mics, hold Space to talk, and subtitles.
 - **The rest:** the "Looked at:" line and the ending.
@@ -101,12 +137,21 @@ Playwright and Chromium are already installed in these cloud sessions. On the ow
 
 ```sh
 python3 -m http.server 8765 --bind 127.0.0.1 &
-node tools/tests/box.js /tmp/shots-box        # 81 checks: pile, turning over, leafing, kete/envelope, saving, "Looked at", phones
+node tools/tests/box.js /tmp/shots-box        # 116 checks: pile, handling in hand, turning over, leafing, kete/envelope, saving, "Looked at", the ending, dark mode, phones
 node tools/tests/answers.js /tmp/shots-ans    # 18 checks: plain-language answers, hedges, codes, word matching
 node tools/tests/voice.js /tmp/shots-voice    # 101 checks, about 10 minutes: listening, speaking, setup, hold Space, lid
 ```
 
-Every check prints PASS or FAIL. The suites should be fully green, at 81, 18 and 101. They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
+Every check prints PASS or FAIL. The suites should be fully green, at 116, 18 and 101. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
+
+**Against the live site,** pictures and Alexa's model arrive slowly, so the suites don't rely on download speed:
+- **`box.js`** waits for the pictures on the table before looking for a spot on something. It also waits for the thing in hand to be fitted to its picture before measuring it; until the picture arrives, it keeps the size of whatever was held before.
+- **`voice.js`** has a check that asks a question while her model is still arriving. For that check it serves her model from the checkout, so the only delay is its deliberate 1.5 s, short of the 8 s she waits. From the live site, the real download alone could take longer than that.
+
+**Trying a branch on a phone before merging:** push it, then open `https://raw.githack.com/richdurham/chickencoop/<full commit id>/demo/index.html`. Use the commit id, not the branch name, because `claude/...` branch names have a slash in them.
+- **The first visit** shows a notice page from raw.githack.com, with an ad; "Open the page" goes through to the game, and later visits skip it.
+- **It's https,** so the microphone works and the browser keeps Alexa's model between visits, as on the live site.
+- **Serving from the Mac** over the home network (plain http) is slower: the phone can't keep the model, and Python's server is basic.
 
 **Answer accuracy:** when you change `QA` examples, item `about` text or `label`s, compare against `main` on the held-out questions. `tools/tests/accuracy/eval.mjs` runs the game's real matcher in Node and needs `npm install @huggingface/transformers@3.8.1` somewhere for its Node build. Current scores with the item step:
 - `questions-1.json`: 69 of 76
@@ -124,20 +169,24 @@ The remaining misses are listed by the script. Some are deliberate: questions ab
 
 ## What's next
 
-1. **Option 2, handling things by hand.** The owner chose this as the next big feature. It would add:
-   - **In the enlarged view:**
-     - drag to move a thing;
-     - rotate it, with a two-finger twist on phones, or a corner drag or the scroll wheel on computers;
-     - flick or double-tap to turn it over;
-     - pinch or scroll to zoom;
-     - a "Put it straight" reset, so articles stay readable.
-   - **On the table:** the same rotation, and things can lie face down until turned over.
-
-   Things to watch:
-   - Today a tap looks closer and a swipe turns over or turns pages, so those gestures need reassigning.
-   - Every gesture needs a keyboard equivalent.
-   - Phones are cramped.
-   - `tools/tests/box.js` will need updating.
+1. **Option 2, handling things by hand.** The owner chose this as the next big feature. It was planned as three versions (A, the easier one; B, everything in hand; C, the full one), and the owner picked B, which is built: see "In hand" above. The table is unchanged.
+   - **Feel on a real phone:** this still needs the owner to try it. The numbers to tune are in `game.js`:
+     - a flick is at least 0.5 px/ms sideways, travelling under 160 px;
+     - a double-tap is two taps within 350 ms and 30 px;
+     - the corner zones are 18% of the shorter side, kept between 22 and 56 px;
+     - the glide after a drag while looking closer slows by 6% a frame.
+   - **Not tested here:** Safari's trackpad gesture events.
+   - **The scroll wheel:** the owner's list gave the scroll wheel both rotating and zooming. Plain scrolling reads instead, Ctrl+scroll zooms, and Shift+scroll rotates. This is easy to swap in `wheel()`.
+   - **What's left is version C, the table:**
+     - **Rotating on the table:** a twist with a second finger anywhere on the table, a corner drag, Shift+scroll, and R. Each thing's angle is already saved, as `state.layout[id][3]`.
+     - **Lying face down:** a new saved list, `state.down`.
+       - Old saves load with nothing face down.
+       - The storage key stays the same.
+       - It needs 14 small table copies of backs: the 13 flat things on the table, plus the card.
+       - A thing lying face down is picked up showing its back, and put down with its back showing it lies face down.
+     - **Turning over where it lies:** double-tap or F. A single tap would have to wait about 250 ms before picking a thing up; leaving out the double-tap avoids that.
+     - **The table's drag code** in `bindThing` would be rewritten to handle a second finger across the whole table. That stops players pinching the page to zoom over the table.
+     - **The risks:** the table is where the slips hide. Corners that rotate could slow digging, and things that start face down must not be the ones that matter.
 
    A full 3D version was discussed and not chosen.
 2. **Alexa's lines.** If the owner edits lines in `data.js`, follow `tools/alexa-voice/README.md`. `make.py` records only new or changed lines and removes stale clips. Hand recordings are dropped in under the file name listed in `script.md`.
