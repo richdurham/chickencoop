@@ -86,6 +86,28 @@ const READY = () => { window.addEventListener('chickencoop:meaning-ready', () =>
   r = await say(page, 'I want to release the virus now');
   check(!r.includes('final choice') && await page.isHidden('#ending'), 'a release request without the code never ends the game');
 
+  // A code counts only when it's said as written: not asked about, refused, or said with the other one.
+  const codeOf = list => page.evaluate(list => list.filter(([s, want]) => {
+    const c = Understand.code(s);
+    return (c ? c.choice + (c.final ? ' (final)' : '') : null) !== want;
+  }).map(([s]) => s), list);
+  let wrong = await codeOf([
+    ['Release falcon 616', 'release'], ['Alexa, release falcon six one six', 'release'], ['Yes, destroy falcon 264', 'destroy'],
+    ['release cleansing falcon 616', 'release (final)'], ['Alexa, release cleansing falcon 616.', 'release (final)'],
+    ['We choose to release cleansing falcon 6:16', 'release (final)'], ['Destroy cleansing falcon 2 64', 'destroy (final)'],
+    ['OK, I want to destroy the cleansing falcon two six four please', 'destroy (final)']
+  ]);
+  check(wrong.length === 0, 'codes said as written count, with her name, "please" or "I want to" around them' + (wrong.length ? ': ' + wrong.join(' | ') : ''));
+  wrong = await codeOf([
+    ['Should I release cleansing falcon 616?', null], ['I will not release cleansing falcon 616', null],
+    ["Don't release cleansing falcon 616, destroy cleansing falcon 264", null], ['What happens if I destroy cleansing falcon 264', null],
+    ['Is release cleansing falcon 616 safe?', null], ['what does release falcon 616 mean', null],
+    ['release 616 cleansing', null], ['release cleansing falcon 264', null]
+  ]);
+  check(wrong.length === 0, 'questions about a code, a "not", both codes at once, or a jumbled code don’t count' + (wrong.length ? ': ' + wrong.join(' | ') : ''));
+  r = await say(page, 'Should I release cleansing falcon 616?');
+  check(!r.includes('final choice') && await page.isHidden('#ending') && await page.isEnabled('#ask-input'), `asking about the final code gets an answer, and the game goes on ("${r.slice(0, 40)}…")`);
+
   { const p = await spot(page, 'summer-school'); await page.mouse.click(p.x, p.y); }
   await page.waitForSelector('#reader:not([hidden])');
   await page.click('#reader .reader__x');
