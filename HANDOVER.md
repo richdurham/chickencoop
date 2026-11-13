@@ -38,7 +38,7 @@ Written on 21 October 2026 for the next chat that works on this repo, updated th
   - **Names and captions are neutral.** The `label` is visible; the `caption` is only heard by screen readers. Both say what a thing is, never what to notice.
   - **Progress is vague.** The line reads "Looked at: nothing / a few / some / many / most / all?". It's never a count, and never a plain "all": the owner deliberately frustrates completionists. The ending uses the same line, and lists only the things that were looked at, never the ones that weren't.
   - **No suggested questions anywhere.**
-- **The command codes are hidden.** They are written on two slips of paper at the bottom of the pile: "Release falcon 616" under the envelope and certificate, and "Destroy falcon 264" under the folder. They must never be shown as buttons or prompts in Alexa's panel, because players just click them. Saying a code is matched word for word. The short code gets "are you sure?", and the long one ("…cleansing falcon…") ends the game.
+- **The command codes are hidden.** They are written on two slips of paper at the bottom of the pile: "Release falcon 616" under the envelope and certificate, and "Destroy falcon 264" under the folder. They must never be shown as buttons or prompts in Alexa's panel, because players just click them. Saying a code is matched word for word (`Understand.code` in `demo/understand.js`): the code as written, with "the" allowed after its first word, and only everyday words around it ("Alexa", "please", "I want to"). A question about a code ("should I release cleansing falcon 616?"), a "not", or both codes at once doesn't count, and Alexa answers it by meaning instead. The short code gets "are you sure?", and the long one ("…cleansing falcon…") ends the game.
 - **Alexa's lines are the original Alexa Blueprint script, word for word,** apart from the coins answer, which the owner rewrote. They live in `demo/data.js` (`WELCOME`, `QA[].a`, `CODES`, `FALLBACKS`, `EXIT`, `START_HINT`). The owner will review them and may change some. Changed lines must then be re-recorded (see Voice below), and the owner may record some by hand.
 - **Alexa's voice is a young-sounding British woman:** Kokoro `bf_isabella`, the owner's choice.
 - **The opening animation lasts at least 2 seconds** (the lid takes 2.6). It covers the time her sentence model takes to load.
@@ -138,11 +138,11 @@ Playwright and Chromium are already installed in these cloud sessions. On the ow
 ```sh
 python3 -m http.server 8765 --bind 127.0.0.1 &
 node tools/tests/box.js /tmp/shots-box        # 116 checks: pile, handling in hand, turning over, leafing, kete/envelope, saving, "Looked at", the ending, dark mode, phones
-node tools/tests/answers.js /tmp/shots-ans    # 18 checks: plain-language answers, hedges, codes, word matching
+node tools/tests/answers.js /tmp/shots-ans    # 21 checks: plain-language answers, hedges, codes, word matching
 node tools/tests/voice.js /tmp/shots-voice    # 101 checks, about 10 minutes: listening, speaking, setup, hold Space, lid
 ```
 
-Every check prints PASS or FAIL. The suites should be fully green, at 116, 18 and 101. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
+Every check prints PASS or FAIL. The suites should be fully green, at 116, 21 and 101. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
 
 **Against the live site,** pictures and Alexa's model arrive slowly, so the suites don't rely on download speed:
 - **`box.js`** waits for the pictures on the table before looking for a spot on something. It also waits for the thing in hand to be fitted to its picture before measuring it; until the picture arrives, it keeps the size of whatever was held before.

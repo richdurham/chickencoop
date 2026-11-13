@@ -984,19 +984,14 @@
     });
   }
 
-  /* The codes follow the Blueprint: the short code gets "are you sure?",
-     the code with "cleansing" in it is final. They are matched word for word,
-     never by meaning, so a guess can never make the final choice. */
+  /* The codes follow the Blueprint: the short code gets "are you sure?", the
+     code with "cleansing" in it is final. Understand.code decides what counts
+     as saying one: the code as written, not a question about it or a "not". */
   function codeReply(raw) {
-    var n = norm(raw);
-    var cleansing = has(n, 'cleansing');
-    if (has(n, 'release') && has(n, '616')) {
-      return cleansing ? { text: CODES.release.final, final: 'release' } : { text: CODES.release.confirm };
-    }
-    if (has(n, 'destroy') && has(n, '264')) {
-      return cleansing ? { text: CODES.destroy.final, final: 'destroy' } : { text: CODES.destroy.confirm };
-    }
-    return null;
+    var said = Understand.code(raw);
+    if (!said) return null;
+    var code = CODES[said.choice];
+    return said.final ? { text: code.final, final: said.choice } : { text: code.confirm };
   }
 
   /* Asked in the first moments, while the sentence model is still loading:

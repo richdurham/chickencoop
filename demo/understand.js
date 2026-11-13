@@ -131,6 +131,50 @@
     return result;
   }
 
+  // ---------- Command codes ----------
+
+  /* A code counts only when it's said: as written on its slip ("release falcon
+     616"), or with "cleansing" after its first word for the final one, "the"
+     allowed after its first word, and nothing around it but everyday words like these.
+     A question, a "not" or the other code beside it means the player is talking
+     about a code rather than giving one, and Alexa answers that by meaning. */
+  var AROUND_CODE = (' alexa hey ok okay alright so well um uh er erm hmm yes yeah yep fine sure then now and please thanks thank' +
+    ' i im ill id ive we wed lets let us you my our am will would want wanna like to choose chose decide decided going gonna have' +
+    ' say tell the code command choice final answer ');
+
+  // The code starting at words[i], if one does: { choice, final, end }, end being the index after it.
+  function codeAt(words, i) {
+    var found = null;
+    Object.keys(CODES).forEach(function (choice) {
+      var slip = norm(CODES[choice].short).trim().split(' '); // e.g. release falcon 616
+      if (found || words[i] !== slip[0]) return;
+      var j = i + 1;
+      if (words[j] === 'the') j++;
+      var final = words[j] === 'cleansing';
+      if (final) j++;
+      for (var k = 1; k < slip.length; k++) if (words[j++] !== slip[k]) return;
+      found = { choice: choice, final: final, end: j };
+    });
+    return found;
+  }
+
+  /* Which code was said, if one was: { choice: 'release' | 'destroy', final }.
+     Word for word, never by meaning, so no guess can make the final choice. */
+  function code(raw) {
+    var words = norm(raw).trim().split(' '), said = null;
+    for (var i = 0; i < words.length; i++) {
+      var hit = codeAt(words, i);
+      if (hit) {
+        if (said) return null; // two codes at once: which?
+        said = { choice: hit.choice, final: hit.final };
+        i = hit.end - 1;
+      } else if (AROUND_CODE.indexOf(' ' + words[i] + ' ') === -1) {
+        return null;
+      }
+    }
+    return said;
+  }
+
   // ---------- What Alexa says ----------
 
   /* fallbackTurn picks which of the scripted fallback lines to use. */
@@ -145,7 +189,7 @@
   }
 
   root.Understand = {
-    BANDS: BANDS, norm: norm, has: has,
+    BANDS: BANDS, norm: norm, has: has, code: code,
     byKeywords: byKeywords, anchorTexts: anchorTexts, buildIndex: buildIndex, byMeaning: byMeaning, compose: compose
   };
 })(typeof window !== 'undefined' ? window : globalThis);
