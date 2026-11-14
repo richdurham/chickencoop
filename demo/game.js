@@ -9,7 +9,7 @@
   var state = fresh();
 
   function fresh() {
-    return { started: false, opened: [], log: [], ending: null, fallback: 0, layout: {}, handled: false, out: [] };
+    return { started: false, opened: [], log: [], ending: null, fallback: 0, layout: {}, handled: false, out: [], down: [] };
   }
 
   // ---------- Saving (best effort: private windows may block storage) ----------
@@ -64,6 +64,15 @@
 
   function isOpened(id) { return state.opened.indexOf(id) !== -1; }
 
+  // Anything flat with a back can lie face down on the table, the card included.
+  function canLieDown(item) { return !!item.sides && item.sides[item.pages - 1] === 'Back'; }
+  function isDown(id) { return state.down.indexOf(id) !== -1; }
+  function setDown(id, down) {
+    var i = state.down.indexOf(id);
+    if (down && i === -1) state.down.push(id);
+    else if (!down && i !== -1) state.down.splice(i, 1);
+  }
+
   function itemById(id) {
     for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].id === id) return ITEMS[i];
     return null;
@@ -81,9 +90,13 @@
     return 'box/' + item.id + '-' + (p + 1) + '.jpg';
   }
 
+  // The small copy the table shows: the front, or the back of a thing lying face down.
   function pileSrc(item) {
-    return item.cut ? 'box/cut/thumb/' + item.id + '.webp' : 'box/thumb/' + item.id + '.jpg';
+    var side = isDown(item.id) ? '-' + item.pages : '';
+    return item.cut ? 'box/cut/thumb/' + item.id + side + '.webp' : 'box/thumb/' + item.id + side + '.jpg';
   }
+
+  function pileLabel(item) { return item.label + (isDown(item.id) ? ', face down' : ''); }
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
@@ -167,7 +180,7 @@
     el.className = 'thing' + (LOOK[id] ? ' thing--' + LOOK[id] : '');
     el.dataset.item = id;
     el.style.setProperty('--i', i);
-    el.setAttribute('aria-label', item.label);
+    el.setAttribute('aria-label', pileLabel(item));
     el.setAttribute('aria-describedby', 'thing-help');
     var img = document.createElement('img');
     img.src = pileSrc(item);
@@ -202,43 +215,111 @@
     save();
   }
 
-  /* Drag to move; a tap (or Enter) picks it up; arrow keys nudge it along. */
+  function middleOf(el) {
+    var r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  /* By a corner, the mouse rotates a thing on the table rather than moving it,
+     as it does in hand. Only things big enough to keep a middle to drag them by
+     have corners; the rest turn with R or Shift + scroll. */
+  function atTableCorner(el, id, e) {
+    if (e.pointerType === 'touch') return false;
+    var w = el.offsetWidth, h = el.offsetHeight, z = clamp(Math.min(w, h) * 0.18, 22, 56);
+    if (Math.min(w, h) < z * 3) return false;
+    var m = middleOf(el), dx = e.clientX - m.x, dy = e.clientY - m.y;
+    var a = -placeOf(id)[3] * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+    return Math.abs(dx * c - dy * s) > w / 2 - z && Math.abs(dx * s + dy * c) > h / 2 - z;
+  }
+
+  /* Drag to move; by a corner, the mouse rotates it, and two fingers on it move
+     and twist it. A tap (or Enter) picks it up. Arrow keys nudge it along, R and
+     Shift+R rotate it, and so does Shift + scroll. F turns it over where it lies. */
   function bindThing(el, id) {
-    var drag = null;
+    var drag = null, fingers = {}, wheelSave = 0;
+    var touching = function () { return Object.keys(fingers); };
+    // Start again from where it lies now: when it's touched, and when a finger is added or lifted.
+    var regrip = function () {
+      var ids = touching(), p = fingers[ids[0]], q = fingers[ids[1]];
+      drag.from = placeOf(id);
+      drag.turnedBy = 0;
+      if (q) {
+        drag.mode = 'two';
+        drag.c = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+        drag.t = Math.atan2(q.y - p.y, q.x - p.x);
+      } else {
+        if (drag.mode === 'two') drag.mode = 'move';
+        var m = middleOf(el);
+        drag.p = { x: p.x, y: p.y };
+        drag.t = Math.atan2(p.y - m.y, p.x - m.x);
+      }
+    };
     el.addEventListener('pointerdown', function (e) {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
+      var n = touching().length;
+      if (n >= 2) return;
       e.preventDefault();
       el.setPointerCapture(e.pointerId);
-      var r = $('desk').getBoundingClientRect(), b = DESKS[deskShape].box;
-      drag = { x: e.clientX, y: e.clientY, from: placeOf(id), moved: false,
-        unitX: r.width * b[2] / 10000, unitY: r.height * b[3] / 10000 }; // pixels per box unit
+      fingers[e.pointerId] = { x: e.clientX, y: e.clientY };
+      if (!n) {
+        var r = $('desk').getBoundingClientRect(), b = DESKS[deskShape].box;
+        drag = { mode: atTableCorner(el, id, e) ? 'turn' : 'move', moved: false, two: false, turned: false,
+          start: { x: e.clientX, y: e.clientY },
+          unitX: r.width * b[2] / 10000, unitY: r.height * b[3] / 10000 }; // pixels per box unit
+      } else {
+        drag.two = true;
+      }
+      regrip();
     });
     el.addEventListener('pointermove', function (e) {
-      if (!drag) return;
-      var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!fingers[e.pointerId]) {
+        // Hovering: by a corner, the pointer shows it will rotate.
+        if (e.pointerType === 'mouse') el.classList.toggle('at-corner', atTableCorner(el, id, e));
+        return;
+      }
+      fingers[e.pointerId] = { x: e.clientX, y: e.clientY };
       if (!drag.moved) {
-        if (Math.abs(dx) + Math.abs(dy) < 6) return;
+        if (drag.mode !== 'two' && Math.abs(e.clientX - drag.start.x) + Math.abs(e.clientY - drag.start.y) < 6) return;
         drag.moved = true;
         bringToFront(id);
         el.classList.add('is-held');
       }
-      var p = state.layout[id];
-      p[0] = clampX(drag.from[0] + dx / drag.unitX);
-      p[1] = clampY(drag.from[1] + dy / drag.unitY);
+      var p = state.layout[id], f = drag.from, t;
+      if (drag.mode === 'move') {
+        p[0] = clampX(f[0] + (e.clientX - drag.p.x) / drag.unitX);
+        p[1] = clampY(f[1] + (e.clientY - drag.p.y) / drag.unitY);
+      } else {
+        if (drag.mode === 'two') {
+          var ids = touching(), a = fingers[ids[0]], b = fingers[ids[1]];
+          t = Math.atan2(b.y - a.y, b.x - a.x);
+          p[0] = clampX(f[0] + ((a.x + b.x) / 2 - drag.c.x) / drag.unitX);
+          p[1] = clampY(f[1] + ((a.y + b.y) / 2 - drag.c.y) / drag.unitY);
+        } else {
+          var m = middleOf(el);
+          t = Math.atan2(e.clientY - m.y, e.clientX - m.x);
+        }
+        drag.turnedBy += turnStep(t - drag.t);
+        drag.t = t;
+        p[3] = f[3] + drag.turnedBy * 180 / Math.PI;
+        drag.turned = true;
+      }
       place(el, p);
     });
     var end = function (e) {
-      if (!drag) return;
-      var moved = drag.moved;
+      if (!fingers[e.pointerId]) return;
+      delete fingers[e.pointerId];
+      if (touching().length) { regrip(); return; } // one finger lifted: carry on with the other
+      var g = drag;
       drag = null;
-      if (moved) {
+      if (g.moved) {
         var p = state.layout[id];
-        p[3] = Math.round((p[3] + Math.random() * 8 - 4) * 10) / 10; // nothing lands quite the same way twice
+        // Nothing lands quite the same way twice, unless it was turned to lie just so.
+        p[3] = Math.round((p[3] + (g.turned ? 0 : Math.random() * 8 - 4)) * 10) / 10;
         place(el, p);
         el.classList.remove('is-held');
         handled();
         save();
-      } else if (e.type === 'pointerup') {
+      } else if (e.type === 'pointerup' && !g.two) {
         bringToFront(id);
         save();
         openReader(id);
@@ -246,21 +327,72 @@
     };
     el.addEventListener('pointerup', end);
     el.addEventListener('pointercancel', end);
+    el.addEventListener('pointerleave', function () { if (!drag) el.classList.remove('at-corner'); });
+    // Shift + scroll rotates it; plain scrolling still scrolls the page.
+    el.addEventListener('wheel', function (e) {
+      if (!e.shiftKey || e.ctrlKey || drag) return;
+      e.preventDefault();
+      bringToFront(id);
+      var p = state.layout[id], unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+      p[3] = Math.round((p[3] + clamp((e.deltaY || e.deltaX) * unit, -100, 100) * 0.15) * 10) / 10; // some browsers send Shift + scroll sideways
+      place(el, p);
+      handled();
+      clearTimeout(wheelSave);
+      wheelSave = setTimeout(save, 300);
+    }, { passive: false });
     // Keyboard Enter or Space (a click with no pointer behind it).
     el.addEventListener('click', function (e) { if (e.detail === 0) { bringToFront(id); save(); openReader(id); } });
     el.addEventListener('keydown', function (e) {
-      var s = e.shiftKey ? 10 : 3;
+      var plain = !e.ctrlKey && !e.metaKey && !e.altKey;
+      if (plain && (e.key === 'f' || e.key === 'F')) {
+        if (turnOver(id)) e.preventDefault();
+        return;
+      }
+      var s = e.shiftKey ? 10 : 3, turn = plain && (e.key === 'r' || e.key === 'R');
       var d = { ArrowLeft: [-s, 0], ArrowRight: [s, 0], ArrowUp: [0, -s], ArrowDown: [0, s] }[e.key];
-      if (!d) return;
+      if (!d && !turn) return;
       e.preventDefault();
       bringToFront(id);
       var p = state.layout[id];
-      p[0] = clampX(p[0] + d[0]);
-      p[1] = clampY(p[1] + d[1]);
+      if (turn) {
+        p[3] += e.shiftKey ? -15 : 15;
+      } else {
+        p[0] = clampX(p[0] + d[0]);
+        p[1] = clampY(p[1] + d[1]);
+      }
       place(el, p);
       handled();
       save();
     });
+  }
+
+  /* F turns a thing over where it lies, which brings it to the top. Solid
+     things, the folder and the lid have no back to show. */
+  function turnOver(id) {
+    var item = itemById(id), el = thingEl(id);
+    if (!item || !el || !canLieDown(item)) return false;
+    setDown(id, !isDown(id));
+    bringToFront(id);
+    save();
+    showSide(el, item, true);
+    return true;
+  }
+
+  // Show the side a thing lies on. Turning, it narrows to its edge, changes side and opens out again.
+  function showSide(el, item, turning) {
+    var img = el.querySelector('img'), src = pileSrc(item);
+    el.setAttribute('aria-label', pileLabel(item));
+    if (!turning || reduceMotion) { img.src = src; return; }
+    var next = new Image(), half = false;
+    var swap = function () {
+      if (!half || !next.complete) return;
+      img.src = src;
+      el.classList.remove('is-turning');
+    };
+    next.onload = next.onerror = swap;
+    next.src = src;
+    el.classList.add('is-turning');
+    setTimeout(function () { half = true; swap(); }, 150);
   }
 
   // How much has been looked at, in words. Never a count, and never a plain
@@ -319,8 +451,8 @@
   function openReader(id, takenOut) {
     var item = itemById(id);
     if (!item) return;
-    var h = handFor(item);
-    holding = { item: item, kind: h.kind, pages: h.pages, at: 0, turned: false, spin: 0, toTop: false };
+    var h = handFor(item), down = isDown(id) && canLieDown(item);
+    holding = { item: item, kind: h.kind, pages: h.pages, at: 0, turned: false, spin: 0, toTop: false, down: down };
     if (!takenOut) returnFocus = document.activeElement;
 
     $('reader-title').textContent = item.label;
@@ -333,6 +465,15 @@
       hand.classList.add('is-emerging');
       hand.addEventListener('animationend', function () { hand.classList.remove('is-emerging'); }, { once: true });
     }
+    // Something lying face down is picked up showing its back.
+    if (down && h.kind === 'flip') {
+      holding.turned = true;
+      holding.spin = 180;
+      hand.classList.add('is-turned');
+      hand.style.setProperty('--spin', '180deg');
+    } else if (down) {
+      holding.at = h.pages.length - 1;
+    }
     if (h.kind === 'flip') {
       h.pages.forEach(function (pg, i) {
         var face = document.createElement('div');
@@ -341,7 +482,7 @@
         hand.appendChild(face);
       });
     } else {
-      hand.appendChild(pageEl(h.pages[0]));
+      hand.appendChild(pageEl(h.pages[holding.at]));
     }
     $('reader-prev').hidden = $('reader-next').hidden = h.kind !== 'leaf';
     $('reader-turn').hidden = h.kind !== 'flip';
@@ -399,11 +540,12 @@
   function flip(dir) {
     if (!holding || holding.kind !== 'flip') return;
     holding.turned = !holding.turned;
-    holding.spin += (dir || (holding.turned ? 1 : -1)) * 180;
+    var over = holding.turned !== holding.down; // the other way up from how it was picked up
+    holding.spin += (dir || (over ? 1 : -1)) * 180;
     var hand = $('hand');
     hand.classList.toggle('is-turned', holding.turned);
     hand.style.setProperty('--spin', holding.spin + 'deg');
-    $('reader-turn').textContent = holding.turned ? 'Turn it back' : 'Turn it over';
+    $('reader-turn').textContent = over ? 'Turn it back' : 'Turn it over';
     showAt();
   }
 
@@ -444,6 +586,7 @@
     if (!holding) return;
     var from = holding.item, next = stillInside(from)[0];
     if (!next) return;
+    putDown();
     var lands = TAKE_OUT[next.id] || [20, 0], at = beside(placeOf(from.id), lands[0]);
     state.layout[next.id] = [at[0], at[1], lands[0], lands[1], topZ() + 1];
     state.out.push(next.id);
@@ -885,6 +1028,18 @@
     return false;
   }
 
+  // It's put down the way up it's held: showing its back, it lies face down.
+  function putDown() {
+    var item = holding && holding.item;
+    if (!item || !canLieDown(item)) return;
+    var back = holding.kind === 'flip' ? holding.turned : holding.at === holding.pages.length - 1;
+    if (back === isDown(item.id)) return;
+    setDown(item.id, back);
+    save();
+    var el = thingEl(item.id);
+    if (el) showSide(el, item, false);
+  }
+
   function closeReader() {
     if ($('reader').hidden) return;
     $('reader').hidden = true;
@@ -892,6 +1047,7 @@
     $('hand').textContent = '';
     document.body.style.overflow = '';
     var id = holding && holding.item.id;
+    putDown();
     holding = null;
     var again = id && thingEl(id);
     if (again) again.focus({ preventScroll: true });

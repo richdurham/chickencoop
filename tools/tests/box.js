@@ -44,6 +44,26 @@ async function covered(page, id) {
   }, id);
 }
 // Is no part of this thing on top anywhere?
+// How a thing lies on the table: its angle, where it is, which side shows, and what it's called.
+async function lies(page, id) {
+  return page.$eval('.thing[data-item="' + id + '"]', el => ({ a: parseFloat(el.style.getPropertyValue('--r')), at: el.style.left + ' ' + el.style.top,
+    src: el.querySelector('img').getAttribute('src'), label: el.getAttribute('aria-label'), corner: el.classList.contains('at-corner') }));
+}
+const faceDown = t => /-\d\.(jpg|webp)$/.test(t.src) && t.label.endsWith(', face down');
+// A point by one of a thing's corners, on top of the pile and on the screen; or null.
+async function cornerOf(page, id, inset) {
+  return page.$eval('.thing[data-item="' + id + '"]', (el, inset) => {
+    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const a = parseFloat(el.style.getPropertyValue('--r')) * Math.PI / 180, w = el.offsetWidth, h = el.offsetHeight;
+    for (const [sx, sy] of [[1, -1], [-1, -1], [1, 1], [-1, 1]]) {
+      const lx = sx * (w / 2 - inset), ly = sy * (h / 2 - inset);
+      const x = cx + lx * Math.cos(a) - ly * Math.sin(a), y = cy + lx * Math.sin(a) + ly * Math.cos(a);
+      const hit = document.elementFromPoint(x, y);
+      if (hit && hit.closest('.thing') === el) return { x, y, cx, cy, min: Math.min(w, h) };
+    }
+    return null;
+  }, inset);
+}
 async function hidden(page, id) {
   return page.evaluate(id => {
     const el = document.querySelector('.thing[data-item="' + id + '"]');
@@ -126,6 +146,7 @@ async function say(page, text) {
 
   check((await page.$$('.thing')).length === 17, '17 things on the table (the rest are in the folder, the kete and the envelope)');
   check(!(await page.$('.thing[data-item="dog-tags"]')) && !(await page.$('.thing[data-item="card"]')) && !(await page.$('.thing[data-item="kete-note"]')), 'the dog tags, the paper and the card start inside things');
+  check(await page.$$eval('.thing', els => els.every(el => !/-\d\.(jpg|webp)$/.test(el.querySelector('img').getAttribute('src')) && !/face down/.test(el.getAttribute('aria-label')))), 'nothing starts face down');
   check((await page.$$('.chip')).length === 0 && !(await page.$('#reader-ask')) && !(await page.$('#chips')), 'no suggested questions anywhere');
   check((await page.$$('.code')).length === 0 && !(await page.$('#codes')), 'Alexa’s panel doesn’t offer the command codes');
   check(await hidden(page, 'release-slip') && await hidden(page, 'destroy-slip'), 'the two slips with the codes start out of sight, under other things');
@@ -359,12 +380,76 @@ async function say(page, text) {
   check(await page.isVisible('#reader') && (await page.textContent('#reader-title')) === 'Mug', 'Enter picks it up');
   await page.keyboard.press('Escape');
 
+  // Put down showing its back, a thing lies face down: everything turned over above, and the card put down at its back.
+  { const down = [];
+    for (const id of ['lid-note', 'wrinkled-note', 'dog-tags', 'kete-note', 'boarding-pass', 'coins', 'certificate', 'release-slip', 'destroy-slip',
+      'family-photo', 'summer-school', 'who-trip', 'envelope', 'card']) if (faceDown(await lies(page, id))) down.push(id);
+    check(down.length === 14, `put down showing its back, it lies face down, the card included (${down.length} of 14)`);
+    check(!faceDown(await lies(page, 'mug')) && !faceDown(await lies(page, 'folder-cover')), 'solid things and the folder never lie face down');
+  }
+  await page.screenshot({ path: OUT + '/t13-face-down.png' });
+  await page.focus('.thing[data-item="summer-school"]'); await page.keyboard.press('Enter');
+  check((await page.textContent('#reader-page')) === 'Back' && (await page.textContent('#reader-turn')) === 'Turn it over' && await page.$eval('#hand', h => h.classList.contains('is-turned')),
+    'picked up face down, it shows its back first, to be turned over');
+  await page.click('#reader-turn');
+  check((await page.textContent('#reader-page')) === 'Front' && (await page.textContent('#reader-turn')) === 'Turn it back', 'turned over, it shows its front');
+  await page.keyboard.press('Escape');
+  { const t = await lies(page, 'summer-school'); check(t.src === 'box/thumb/summer-school.jpg' && t.label === 'Group photo', 'and put down that way, it lies face up again'); }
+  await page.focus('.thing[data-item="card"]'); await page.keyboard.press('Enter');
+  check((await page.textContent('#reader-page')) === 'Back (3 of 3)' && await page.isDisabled('#reader-next') && await page.isEnabled('#reader-prev'), 'the card, face down, is picked up at its back');
+  await page.keyboard.press('Escape');
+  check(faceDown(await lies(page, 'card')), 'and put down at its back, it stays face down');
+
+  // F turns a thing over where it lies; R rotates it; so do Shift + scroll and a corner.
+  await page.focus('.thing[data-item="family-photo"]');
+  await page.keyboard.press('f');
+  { const t = await lies(page, 'family-photo'), z = await page.$$eval('.thing', els => els.map(e => ({ id: e.dataset.item, z: +e.style.zIndex })));
+    check(t.src === 'box/thumb/family-photo.jpg' && t.label === 'Family photo' && z.find(e => e.id === 'family-photo').z === Math.max(...z.map(e => e.z)), 'F turns it over where it lies, onto the top of the pile'); }
+  await page.keyboard.press('F');
+  check(faceDown(await lies(page, 'family-photo')), 'and F again turns it back face down');
+  await page.focus('.thing[data-item="mug"]');
+  const mug0 = await lies(page, 'mug');
+  await page.keyboard.press('f');
+  { const t = await lies(page, 'mug'); check(t.src === mug0.src && t.label === 'Mug', 'F does nothing to a solid thing'); }
+  await page.keyboard.press('r');
+  const mugR = await lies(page, 'mug');
+  await page.keyboard.press('Shift+R'); await page.keyboard.press('Shift+R');
+  check(within(mugR.a, mug0.a + 15, 0.01) && within((await lies(page, 'mug')).a, mug0.a - 15, 0.01) && mugR.at === mug0.at, `R rotates a thing on the table one way, Shift+R the other (${mug0.a}° to ${mugR.a}°)`);
+  check(await page.isHidden('#reader'), 'without picking it up');
+  { const p = await spot(page, 'folder-cover'), f0 = await lies(page, 'folder-cover');
+    await page.mouse.move(p.x, p.y);
+    await page.keyboard.down('Shift'); await page.mouse.wheel(0, 100); await page.keyboard.up('Shift');
+    const f1 = await lies(page, 'folder-cover');
+    check(within(f1.a, f0.a + 15, 0.5) && f1.at === f0.at, `Shift + scroll over a thing rotates it (${f0.a}° to ${f1.a}°)`);
+  }
+  await page.waitForTimeout(300); // a thing on the table takes a moment to turn to its new angle
+  { const k = await cornerOf(page, 'folder-cover', 8), f0 = await lies(page, 'folder-cover');
+    await page.mouse.move(k.cx, k.cy);
+    const mid = (await lies(page, 'folder-cover')).corner;
+    await page.mouse.move(k.x, k.y);
+    check(!mid && (await lies(page, 'folder-cover')).corner, 'by a corner of a thing on the table, the pointer shows it will rotate');
+    const t0 = Math.atan2(k.y - k.cy, k.x - k.cx), R = Math.hypot(k.x - k.cx, k.y - k.cy);
+    await page.mouse.down();
+    for (let i = 1; i <= 6; i++) { const t = t0 + (Math.PI / 6) * i / 6; await page.mouse.move(k.cx + R * Math.cos(t), k.cy + R * Math.sin(t)); }
+    await page.mouse.up();
+    const f1 = await lies(page, 'folder-cover');
+    check(within(f1.a, f0.a + 30, 2) && f1.at === f0.at && await page.isHidden('#reader'), `dragging a corner rotates it where it lies, without picking it up (${f0.a}° to ${f1.a}°)`);
+  }
+  // Things too small to keep a middle to drag them by have no corners.
+  await page.focus('.thing[data-item="coins"]'); await page.keyboard.press('ArrowUp');
+  await page.waitForTimeout(300);
+  { const k = await cornerOf(page, 'coins', 4);
+    await page.mouse.move(k.cx, k.cy); await page.mouse.move(k.x, k.y);
+    check(k.min < 66 && !(await lies(page, 'coins')).corner, `the coins are too small to have corners (${Math.round(k.min)}px across)`); }
+  await page.screenshot({ path: OUT + '/t14-turned.png' });
+
   // The arrangement survives a reload.
   await page.reload();
   await page.click('#resume');
   await page.waitForSelector('#game:not([hidden])');
   const again = await page.$eval('.thing[data-item="folder-cover"]', el => el.style.left + ' ' + el.style.top);
   check(again === after, 'where things were left is remembered');
+  check(faceDown(await lies(page, 'family-photo')) && faceDown(await lies(page, 'card')) && !faceDown(await lies(page, 'summer-school')), 'which way up things lie is remembered');
   check(await page.isHidden('#desk-hint'), 'the hint stays gone');
   check((await page.$$('.thing')).length === 20, 'what was taken out is still on the table');
   await pickUp(page, 'kete');
@@ -406,6 +491,18 @@ async function say(page, text) {
       return { share: el.offsetWidth / document.getElementById('carton').offsetWidth, turn: el.style.getPropertyValue('--r'), size: PILE.find(r => r[0] === 'coins')[3] / 100 };
     });
     check(Math.abs(coins.share - coins.size) < 0.02 && coins.turn === '5deg', `a thing stays where it was left but takes its current size (${coins.share.toFixed(3)} of the box, ${coins.turn})`);
+    check(await p.$$eval('.thing img', imgs => imgs.every(i => !/-\d\.(jpg|webp)$/.test(i.getAttribute('src')))), 'a save from before things could lie face down has everything face up');
+    const backs = await p.evaluate(async () => {
+      const size = src => new Promise(r => { const i = new Image(); i.onload = () => r(i.naturalWidth + 'x' + i.naturalHeight); i.onerror = () => r('missing'); i.src = src; });
+      const out = [];
+      for (const it of ITEMS.filter(it => it.sides && it.sides[it.pages - 1] === 'Back')) {
+        const base = it.cut ? 'box/cut/thumb/' + it.id : 'box/thumb/' + it.id, ext = it.cut ? '.webp' : '.jpg';
+        out.push({ id: it.id, front: await size(base + ext), back: await size(base + '-' + it.pages + ext) });
+      }
+      return out;
+    });
+    const odd = backs.filter(b => b.back !== b.front).map(b => `${b.id} ${b.front} / ${b.back}`);
+    check(backs.length === 14 && !odd.length, `all 14 things that can lie face down have a back for the table, the same size as the front` + (odd.length ? ': ' + odd.join(', ') : ''));
     await c.close();
   }
   {
@@ -417,6 +514,34 @@ async function say(page, text) {
     await p.waitForSelector('#ending:not([hidden])');
     const listed = await p.$$eval('.ending__items li', lis => lis.map(li => li.textContent));
     check(JSON.stringify(listed) === JSON.stringify(['Kete', 'Mug', 'Get-well card']) && (await p.textContent('#ending-count')) === 'Looked at: a few', `the ending lists only the few things looked at, and says "a few" (${listed.join(', ')})`);
+    await c.close();
+  }
+  {
+    // With motion on: turning over where it lies takes a moment, and an envelope opened face down is put down face down.
+    const c = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await c.addInitScript(() => { try { localStorage.setItem('chickencoop-setup', 'text'); } catch (e) {} });
+    const p = await c.newPage(); watch(p, 'motion: ');
+    await p.goto(URL);
+    await p.evaluate(() => localStorage.setItem('chickencoop-demo-v2', JSON.stringify({ started: true, opened: [], log: [], ending: null, fallback: 0, layout: {}, handled: true, out: [] })));
+    await p.reload();
+    await p.click('#resume');
+    await p.waitForSelector('#game:not([hidden])');
+    const mid = await p.$eval('.thing[data-item="certificate"]', el => {
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', bubbles: true }));
+      return { src: el.querySelector('img').getAttribute('src'), turning: el.classList.contains('is-turning') };
+    });
+    const turned = await p.waitForFunction(() => {
+      const el = document.querySelector('.thing[data-item="certificate"]');
+      return el.querySelector('img').getAttribute('src') === 'box/thumb/certificate-2.jpg' && !el.classList.contains('is-turning');
+    }, null, { timeout: 2000 }).then(() => true, () => false);
+    check(mid.turning && mid.src === 'box/thumb/certificate.jpg' && turned, 'with motion, a thing turned over where it lies narrows to its edge, then shows its back');
+    await p.focus('.thing[data-item="envelope"]'); await p.keyboard.press('Enter');
+    await p.waitForSelector('#reader:not([hidden])');
+    await p.click('#reader-turn');
+    await p.click('#reader-reach');
+    check((await p.textContent('#reader-title')) === 'Get-well card' && (await p.textContent('#reader-page')) === 'Front (1 of 3)', 'opened turned over, the envelope gives up the card front first');
+    await p.keyboard.press('Escape');
+    check(faceDown(await lies(p, 'envelope')) && !faceDown(await lies(p, 'card')), 'and the envelope is left face down, the card face up');
     await c.close();
   }
   {
@@ -478,6 +603,17 @@ async function say(page, text) {
     check(within((await pose(mp)).a, 0, 0.5) && await mp.isHidden('#reader-straight'), 'and “Put it straight” turns it straight again');
   }
   await mp.tap('#reader .reader__x');
+  // On the table, one finger moves a thing, and two on it twist it where it lies.
+  { const p0 = await spot(mp, 'folder-cover');
+    await fingers(mp, [p0], [{ x: p0.x, y: p0.y + 30 }]);
+    const f0 = await lies(mp, 'folder-cover'), t = Math.PI / 6, d = 35;
+    const c = await mp.$eval('.thing[data-item="folder-cover"]', el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    await fingers(mp, [{ x: c.x - d, y: c.y }, { x: c.x + d, y: c.y }],
+      [{ x: c.x - d * Math.cos(t), y: c.y - d * Math.sin(t) }, { x: c.x + d * Math.cos(t), y: c.y + d * Math.sin(t) }]);
+    const f1 = await lies(mp, 'folder-cover');
+    check(within(f1.a - f0.a, 30, 2) && await mp.isHidden('#reader'), `on a phone, two fingers on a thing on the table twist it, without picking it up (${(f1.a - f0.a).toFixed(1)}°)`);
+    await mp.screenshot({ path: OUT + '/t15-phone-table-twist.png' });
+  }
   { const p = await spot(mp, 'kete'); await mp.touchscreen.tap(p.x, p.y); }
   await mp.waitForSelector('#reader:not([hidden])');
   await mp.screenshot({ path: OUT + '/t10-phone-kete.png' });

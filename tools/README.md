@@ -19,7 +19,7 @@ Then run a suite:
 - **What they print:** each check prints PASS or FAIL, and a failure makes the exit code 1.
 - **The address** defaults to `http://127.0.0.1:8765/demo/`. Give the live site's address to check it after a merge.
 - **What they cover:**
-  - `box.js`: the pile, picking up, handling things in hand (moving, rotating, zooming, flicks, double-taps, keys, two fingers on a phone), turning over, leafing, the kete and envelope, saving, "Looked at", and phones.
+  - `box.js`: the pile, rotating things on the table and leaving them face down, picking up, handling things in hand (moving, rotating, zooming, flicks, double-taps, keys, two fingers on a phone), turning over, leafing, the kete and envelope, saving, "Looked at", and phones.
   - `answers.js`: Alexa's plain-language answers, and word matching without the model.
   - `voice.js`: listening, speaking, the first-visit choice, hold Space, subtitles and the lid animation. It fakes the speech recogniser, voices and microphone, and plays `clips/` as what the microphone hears.
 - **`accuracy/eval.mjs`** runs the game's real matcher in Node on the held-out questions in `accuracy/questions-*.json`. It needs the Node build of `@huggingface/transformers@3.8.1`:
@@ -37,3 +37,4 @@ The scripts that made the box's images. Each script's first lines say how to run
 - **`backs.py`** makes the backs of the flat things from their fronts. The things themselves are gone, so these backs are all there is. Give it names to remake only some (`python backs.py <repo> envelope`).
 - **`tags.py`** punches worn lettering into the dog tags beside their stamped labels, leaving only the name's K readable, and makes their back from the result. It starts from the tags as photographed, which it takes from the repo's history.
 - **`coins.py`** cuts out the two kuna coins from their photos (both sides of each, from Numista, CC BY 4.0), lays them side by side, and makes their back by turning the pair over.
+- **`thumbs.py`** makes the small copies of the backs that the table shows when something lies face down, from the full-size backs, at exactly the size of each front's copy. Run it again after any of the scripts above changes a back. It needs only Pillow.

@@ -1,6 +1,6 @@
 # Handover: the browser demo of Open the Chicken Coop
 
-Written on 21 October 2026 for the next chat that works on this repo, updated the same day once the real box turned out to be gone, on 22 October 2026 once things could be handled in hand, and on 23 October 2026 once the page took on its hastily made look. It covers what the demo is, what the owner wants from it, how it is built, how to test a change, and what is queued next. Everything below is on `main` and live.
+Written on 21 October 2026 for the next chat that works on this repo, updated the same day once the real box turned out to be gone, on 22 October 2026 once things could be handled in hand, on 23 October 2026 once the page took on its hastily made look, and on 13 November 2026 once things on the table could be rotated and left face down. It covers what the demo is, what the owner wants from it, how it is built, how to test a change, and what is queued next. Everything below is on `main` and live.
 
 - **Live demo:** https://richdurham.github.io/chickencoop/demo/ (GitHub Pages, deployed from `main`)
 - **Repo:** `richdurham/chickencoop`. The demo is in `demo/`, and tools and tests are in `tools/`.
@@ -13,7 +13,7 @@ Written on 21 October 2026 for the next chat that works on this repo, updated th
 
 1. The player says or types "Alexa, open the chicken coop".
 2. The lid comes off.
-3. They dig through the pile, pick things up, turn them over, leaf through the folder, and take things out of the kete and the envelope.
+3. They dig through the pile, rotate things where they lie, pick things up, turn them over, leaf through the folder, and take things out of the kete and the envelope.
 4. They ask Alexa questions, typed or spoken, and she answers aloud.
 5. They say a code, confirm it, and see an ending.
 
@@ -35,6 +35,7 @@ Written on 21 October 2026 for the next chat that works on this repo, updated th
   - **On phones,** the main buttons are a little taller, so they're easy to tap.
 - **The game never helps.** The box is full of red herrings, and players are meant to poke at everything because they don't know what matters. Nothing on screen may hint at what matters:
   - **Everything flat turns over,** even when its back is blank. Only the solid things (kete, plant, glasses, mug) don't, and nor does the lid, whose top is seen on the closed box.
+  - **Nothing starts face down.** A thing lies face down only once a player puts it down that way, so a slip is never hidden on its back from the start.
   - **Names and captions are neutral.** The `label` is visible; the `caption` is only heard by screen readers. Both say what a thing is, never what to notice.
   - **Progress is vague.** The line reads "Looked at: nothing / a few / some / many / most / all?". It's never a count, and never a plain "all": the owner deliberately frustrates completionists. The ending uses the same line, and lists only the things that were looked at, never the ones that weren't.
   - **No suggested questions anywhere.**
@@ -80,9 +81,11 @@ The demo is a static site: plain HTML, CSS and JavaScript, no build step. Jekyll
 - **Matching help:** `INTRO_PHRASES` (opening lines that count) and `VOICE_WORDS` (names Whisper is primed with).
 
 **What `demo/game.js` does:**
-- **Saving:** state is kept in `localStorage` under `chickencoop-demo-v2`. It holds `started`, `opened`, `log`, `ending`, `fallback`, `layout`, `handled` and `out`.
-- **The pile:** drag to move a thing, tap or Enter to pick it up, arrow keys to nudge.
-- **In hand:** turning over (`flip`), leafing through (`leaf`), and taking things out (`reachIn`). How it's held is `pose`: moved, rotated and zoomed, shown by `hold()` as a transform on `#grip`, around `#hand`, which does the turning over. None of it is saved; every pickup starts straight and fitted.
+- **Saving:** state is kept in `localStorage` under `chickencoop-demo-v2`. It holds `started`, `opened`, `log`, `ending`, `fallback`, `layout` (each thing's spot, size, angle and height in the pile), `handled`, `out` and `down` (the things lying face down). Saves from before `down` load with everything face up.
+- **The pile** (`bindThing`): drag to move a thing, tap or Enter to pick it up, arrow keys to nudge.
+  - **Rotating where it lies:** the mouse by a corner (the pointer changes there), two fingers on the thing, Shift+scroll over it, or R and Shift+R. A thing has corners only if its shorter side is at least three corner zones across; smaller things turn the other ways. A plain drag still lands a few degrees off at random, but a turn lands exactly where it's left.
+  - **Face down:** a thing put down showing its back lies face down, showing a small copy of its back, and is picked up showing its back, its button reading "Turn it over". F turns a thing over where it lies, narrowing to its edge and opening out again. Anything whose last side in `data.js` is called "Back" can lie face down: 13 flat things and the card.
+- **In hand:** turning over (`flip`), leafing through (`leaf`), and taking things out (`reachIn`). How it's held is `pose`: moved, rotated and zoomed, shown by `hold()` as a transform on `#grip`, around `#hand`, which does the turning over. None of it is saved; every pickup starts straight and fitted, the way up the thing lies. Putting it down (`putDown`, also when something is taken out of it) records which way up it was held.
   - **Handling it:**
     - One finger or the mouse drags it.
     - The mouse by a corner rotates it (the pointer changes there).
@@ -112,6 +115,7 @@ The demo is a static site: plain HTML, CSS and JavaScript, no build step. Jekyll
 **Image naming:**
 - **Ordinary images:** side *n* of a thing is `box/<id>-<n>.jpg`, and the pile's copy is `box/thumb/<id>.jpg`.
 - **Cut-outs:** things photographed on a table use `box/cut/<id>.webp` and `box/cut/thumb/<id>.webp`. Their backs are `box/cut/<id>-2.webp`.
+- **Backs on the table:** a thing lying face down shows `box/thumb/<id>-<n>.jpg` (or `box/cut/thumb/<id>-<n>.webp`), where side *n* is its back. `tools/box-images/thumbs.py` makes them from the full-size backs, at exactly the size of the front's copy.
 - **Opening images:** `box/lid-top.jpg` is used only by the opening animation, and `box/box-closed.jpg` is the intro photo.
 
 **Voice:**
@@ -138,12 +142,12 @@ Playwright and Chromium are already installed in these cloud sessions. On the ow
 
 ```sh
 python3 -m http.server 8765 --bind 127.0.0.1 &
-node tools/tests/box.js /tmp/shots-box        # 116 checks: pile, handling in hand, turning over, leafing, kete/envelope, saving, "Looked at", the ending, dark mode, phones
+node tools/tests/box.js /tmp/shots-box        # 140 checks: pile, rotating and face down on the table, handling in hand, turning over, leafing, kete/envelope, saving, "Looked at", the ending, dark mode, phones
 node tools/tests/answers.js /tmp/shots-ans    # 21 checks: plain-language answers, hedges, codes, word matching
 node tools/tests/voice.js /tmp/shots-voice    # 104 checks, about 10 minutes: listening, speaking, setup, hold Space, lid
 ```
 
-Every check prints PASS or FAIL. The suites should be fully green, at 116, 21 and 104. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
+Every check prints PASS or FAIL. The suites should be fully green, at 140, 21 and 104. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
 
 **Against the live site,** pictures and Alexa's model arrive slowly, so the suites don't rely on download speed:
 - **`box.js`** waits for the pictures on the table before looking for a spot on something. It also waits for the thing in hand to be fitted to its picture before measuring it; until the picture arrives, it keeps the size of whatever was held before.
@@ -159,6 +163,8 @@ Every check prints PASS or FAIL. The suites should be fully green, at 116, 21 an
 - `questions-2.json`: 46 of 50
 - `questions-slips.json`: 7 of 8
 
+On the owner's Mac, `questions-2.json` scores 45: there, "where in New Zealand is this" finds its item at 0.49, just under the 0.50 cutoff. Compare scores made on the same machine.
+
 The remaining misses are listed by the script. Some are deliberate: questions about puzzle items get "I don't know".
 
 **CI** runs only `jekyll build --future`. To check it locally, `gem install --user-install jekyll`, then `jekyll build --future -s . -d /tmp/site`.
@@ -170,24 +176,17 @@ The remaining misses are listed by the script. Some are deliberate: questions ab
 
 ## What's next
 
-1. **Option 2, handling things by hand.** The owner chose this as the next big feature. It was planned as three versions (A, the easier one; B, everything in hand; C, the full one), and the owner picked B, which is built: see "In hand" above. The table is unchanged.
-   - **Feel on a real phone:** this still needs the owner to try it. The numbers to tune are in `game.js`:
+1. **Option 2, handling things by hand.** The owner chose this as the next big feature. It was planned as three versions (A, the easier one; B, everything in hand; C, the full one). B is built (see "In hand" above). So are the two parts of C the owner picked for the table (see "The pile" above): rotating things where they lie, and things lying the way up they're put down, with F to turn them over where they lie.
+   - **Feel on a real phone:** this still needs the owner to try it, in hand and on the table. The numbers to tune are in `game.js`:
      - a flick is at least 0.5 px/ms sideways, travelling under 160 px;
      - a double-tap is two taps within 350 ms and 30 px;
-     - the corner zones are 18% of the shorter side, kept between 22 and 56 px;
+     - the corner zones are 18% of the shorter side, kept between 22 and 56 px, in hand and on the table (`atTableCorner`); on a 1440×900 screen the coins, 62 px across, are too small for corners;
      - the glide after a drag while looking closer slows by 6% a frame.
    - **Not tested here:** Safari's trackpad gesture events.
-   - **The scroll wheel:** the owner's list gave the scroll wheel both rotating and zooming. Plain scrolling reads instead, Ctrl+scroll zooms, and Shift+scroll rotates. This is easy to swap in `wheel()`.
-   - **What's left is version C, the table:**
-     - **Rotating on the table:** a twist with a second finger anywhere on the table, a corner drag, Shift+scroll, and R. Each thing's angle is already saved, as `state.layout[id][3]`.
-     - **Lying face down:** a new saved list, `state.down`.
-       - Old saves load with nothing face down.
-       - The storage key stays the same.
-       - It needs 14 small table copies of backs: the 13 flat things on the table, plus the card.
-       - A thing lying face down is picked up showing its back, and put down with its back showing it lies face down.
-     - **Turning over where it lies:** double-tap or F. A single tap would have to wait about 250 ms before picking a thing up; leaving out the double-tap avoids that.
-     - **The table's drag code** in `bindThing` would be rewritten to handle a second finger across the whole table. That stops players pinching the page to zoom over the table.
-     - **The risks:** the table is where the slips hide. Corners that rotate could slow digging, and things that start face down must not be the ones that matter.
+   - **The scroll wheel:** the owner's list gave the scroll wheel both rotating and zooming. Plain scrolling reads instead, Ctrl+scroll zooms, and Shift+scroll rotates. This is easy to swap in `wheel()`. On the table, plain scrolling still scrolls the page, and Shift+scroll rotates.
+   - **What's left of version C,** not chosen for now:
+     - **Turning over where it lies by touch or mouse.** Only F does it. A double-tap would make every single tap on the table wait about 250 ms before picking something up. A long press (holding still for about half a second) would avoid that, and nothing on the table uses holding still yet.
+     - **A twist with a second finger anywhere on the table,** not only on the thing, which would make small things easier to twist on a phone. It means rewriting `bindThing` to follow fingers across the whole table, which would stop players pinch-zooming the page over the empty table.
 
    A full 3D version was discussed and not chosen.
 2. **Alexa's lines.** If the owner edits lines in `data.js`, follow `tools/alexa-voice/README.md`. `make.py` records only new or changed lines and removes stale clips. Hand recordings are dropped in under the file name listed in `script.md`.
@@ -199,6 +198,8 @@ The remaining misses are listed by the script. Some are deliberate: questions ab
 - **The dog tags' back:** turned over, the tag that was on top stays on top, which real tags wouldn't. The part of the lower tag that lies under the other was never photographed.
 - **Unused recordings:** `UNKNOWN_ITEM` lines are recorded for every item, though items with `links` never use them. This is harmless.
 - **The folder:** it has no `folder-cover-1.jpg`, because it opens straight onto its documents.
+- **The group photo's back:** `summer-school-2.jpg` is a little squarer than its front. In hand it shows a little narrower, inside the front's frame; its table copy is stretched to the front's shape, so the photo keeps its size when it's turned over on the table.
+- **Straight, then moved:** a plain drag lands a few degrees off at random, as it always has, so something turned straight on the table and then moved won't stay quite straight.
 - **Adding to the pile:** new things in `PILE` appear for returning players in their starting spots, at the bottom. A thing a player moved keeps its spot and angle but always takes its size from `PILE` (or `TAKE_OUT`), so changing a size reaches returning players too.
 - **Close calls in understanding:** the browser works out the example sentences' meanings 16 at a time, and its compressed model is slightly affected by which sentences share a batch. Adding or removing a sentence (an `about` line or a QA example) moves every later batch, which can tip answers that sit near a cutoff. The known one: "who are they" while holding the family photo, where the group photo scores 0.488 against the item cutoff of 0.50; at 0.507 Alexa answers about Igor instead of Ken. `eval.mjs` in Node doesn't batch, so it can't see this; after changing sentences, run `voice.js` as well. The dog tags and coins kept their number of `about` lines for this reason.
 - **Tests:** in the test scripts, `URL` is the site address constant, so don't call `new URL(...)` there.
