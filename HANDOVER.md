@@ -124,6 +124,7 @@ The demo is a static site: plain HTML, CSS and JavaScript, no build step. Jekyll
   - Recorded clips play through one reusable audio element, unlocked on the first tap.
   - A reply made of two lines (a hedge, then the answer) plays both clips.
   - Any line without a clip falls back to the browser's own voice, preferring NZ, AU or GB women's voices.
+  - A Pause from keyboards, headphones or Bluetooth speakers doesn't stop her: the page tells the browser it handles Pause itself, and lets her finish. Some speakers send a Pause on their own each time sound starts (the owner's JBL does), and Chrome obeys it for any clip over 5 seconds. Before this, she stopped a few words into her longer lines, then said nothing for about 25 seconds. The voice switch is how players turn her off.
 - **Where players can talk:** a mic beside the intro, a mic in Alexa's panel, a mic in the reader, a mic over the table on phones, and, for players who chose the microphone, hold Space anywhere except in a text box. Subtitles show when Alexa's panel is out of sight.
 
 **Opening:**
@@ -139,10 +140,10 @@ Playwright and Chromium are already installed in these cloud sessions. On the ow
 python3 -m http.server 8765 --bind 127.0.0.1 &
 node tools/tests/box.js /tmp/shots-box        # 116 checks: pile, handling in hand, turning over, leafing, kete/envelope, saving, "Looked at", the ending, dark mode, phones
 node tools/tests/answers.js /tmp/shots-ans    # 21 checks: plain-language answers, hedges, codes, word matching
-node tools/tests/voice.js /tmp/shots-voice    # 101 checks, about 10 minutes: listening, speaking, setup, hold Space, lid
+node tools/tests/voice.js /tmp/shots-voice    # 104 checks, about 10 minutes: listening, speaking, setup, hold Space, lid
 ```
 
-Every check prints PASS or FAIL. The suites should be fully green, at 116, 21 and 101. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
+Every check prints PASS or FAIL. The suites should be fully green, at 116, 21 and 104. Two fingers on a phone can't be done with Playwright's touchscreen, so `box.js` sends them through Chrome's own touch input (`fingers()`). They take the live site's address as a second argument, so after a merge, wait until the live file has the change, then run them against `https://richdurham.github.io/chickencoop/demo/`.
 
 **Against the live site,** pictures and Alexa's model arrive slowly, so the suites don't rely on download speed:
 - **`box.js`** waits for the pictures on the table before looking for a spot on something. It also waits for the thing in hand to be fitted to its picture before measuring it; until the picture arrives, it keeps the size of whatever was held before.

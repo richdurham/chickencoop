@@ -36,6 +36,16 @@
   var clips = null, clipTexts = [];
   var player = canPlay ? new Audio() : null;
 
+  /* Speakers and headphones can tell the browser to pause by themselves: a
+     JBL Bluetooth speaker sends a Pause each time sound starts playing.
+     Browsers obey it for any recording they take for music (in Chrome, one
+     over 5 seconds), so she stopped a few words into her longer lines and
+     then said nothing for half a minute. Saying the page handles Pause itself
+     keeps her talking: her lines are short, and her voice switch turns her off. */
+  if (player && navigator.mediaSession && navigator.mediaSession.setActionHandler) {
+    try { navigator.mediaSession.setActionHandler('pause', function () { /* she finishes what she's saying */ }); } catch (e) { /* not offered here */ }
+  }
+
   if (player && window.fetch) {
     fetch(CLIPS + 'lines.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
       if (!m || !m.lines) return;

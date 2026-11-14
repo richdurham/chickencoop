@@ -52,7 +52,12 @@ function fakes(opts) {
     window.__played = []; window.__pauses = 0; window.__playing = null;
     if (opts.audio === 'real') {
       const play = HTMLMediaElement.prototype.play;
-      HTMLMediaElement.prototype.play = function () { window.__played.push(this.src.split('/demo/').pop()); this.playbackRate = 4; return play.call(this); };
+      window.__ended = [];
+      HTMLMediaElement.prototype.play = function () {
+        window.__played.push(this.src.split('/demo/').pop()); this.playbackRate = 4; window.__audio = this;
+        if (!this.__counted) { this.__counted = true; this.addEventListener('ended', () => window.__ended.push(this.src.split('/demo/').pop())); }
+        return play.call(this);
+      };
     } else {
       HTMLMediaElement.prototype.play = function () {
         const el = this, src = el.src.split('/demo/').pop();
@@ -63,6 +68,12 @@ function fakes(opts) {
         return Promise.resolve();
       };
       HTMLMediaElement.prototype.pause = function () { window.__pauses++; clearTimeout(this.__t); window.__playing = null; };
+    }
+    // What the page asks the browser to do with the Play and Pause of keyboards, headphones and speakers.
+    window.__actions = {};
+    if (navigator.mediaSession) {
+      const set = navigator.mediaSession.setActionHandler.bind(navigator.mediaSession);
+      navigator.mediaSession.setActionHandler = (action, fn) => { window.__actions[action] = fn; return set(action, fn); };
     }
     // The file a line is recorded in, from the game's own list.
     window.__clipOf = async text => { const m = (await (await fetch('voice/alexa/lines.json')).json()).lines; return m[text] ? 'voice/alexa/' + m[text] : null; };
@@ -587,6 +598,17 @@ async function talk(page, mic, clipOrWords) {
     await page.fill('#intro-input', 'Alexa, open the chicken coop');
     const t0 = Date.now();
     await page.click('#intro-form button[type="submit"]');
+    // A speaker or headphones saying Pause as her second line starts (a JBL speaker does, every time):
+    // the browser hands it to the page, which lets her finish. Chrome pauses lines over 5 s itself otherwise.
+    const second = await page.evaluate(() => window.__clipOf(WELCOME[1]));
+    await page.waitForFunction(c => window.__audio && window.__audio.src.endsWith(c) && window.__audio.currentTime > 0, second, { timeout: 60000 });
+    await page.waitForTimeout(300);
+    const pressed = await page.evaluate(() => { if (typeof window.__actions.pause !== 'function') return false; window.__actions.pause({ action: 'pause' }); return true; });
+    check(pressed, 'Alexa tells the browser she handles Pause herself');
+    await page.waitForTimeout(200);
+    check(await page.evaluate(() => !window.__audio.paused), 'a Pause from a speaker or headphones doesn’t stop her mid-line');
+    await page.waitForFunction(c => window.__ended.includes(c), second, { timeout: 15000 }).catch(() => {});
+    check(await page.evaluate(c => window.__ended.includes(c), second), 'and she says the rest of it');
     await page.waitForFunction(() => document.querySelectorAll('.msg--her').length >= 3, null, { timeout: 60000 });
     await page.waitForFunction(() => window.__played.filter(f => f.startsWith('voice/alexa/')).length >= 3, null, { timeout: 60000 });
     await page.waitForTimeout(4500);
